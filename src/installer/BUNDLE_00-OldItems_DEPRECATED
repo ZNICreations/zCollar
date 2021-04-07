@@ -15,4 +15,9 @@ SCRIPT|oc_anticrash
 SCRIPT|oc_meshthemes
 LIKE|S&P
 SCRIPT|oc_outfits.RLV
-SCRIPT|oc_linkprim_hammer
+SCRIPT|zc_linkprim_hammer
+SCRIPT|oc_api
+SCRIPT|oc_core
+SCRIPT|oc_addons
+SCRIPT|oc_folders
+SCRIPT|oc_leash

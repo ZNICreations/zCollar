@@ -1,25 +1,26 @@
 
 /*
-This file is a part of OpenCollar.
+This file is a part of zCollar.
 Copyright ©2021
 
 
 : Contributors :
 
 Aria (Tashia Redrose)
+    * April 2021        -       Changed License Terms
     *January 2021       -       Created oc_addons
 
 
 et al.
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/OpenCollarTeam/OpenCollar
+https://github.com/zontreck/zCollar
 
 */
 
 string g_sParentMenu = "Main";
 string g_sSubMenu = "Addons";
 
-string COLLAR_VERSION = "8.0.5000";
+string COLLAR_VERSION = "10.0.0001";
 
 string Auth2Str(integer iAuth){
     if(iAuth == CMD_OWNER)return "Owner";
@@ -53,13 +54,11 @@ integer CalcAuth(key kID, integer iVerbose){
         if(llListFindList(g_lTrust,[sID])!=-1)return CMD_TRUSTED;
         if(g_kTempOwner == kID) return CMD_TRUSTED;
         if(kID==g_kWearer)return CMD_WEARER;
-        if(in_range(kID) && iVerbose){
+        if(in_range(kID)){
             if(g_kGroup!=NULL_KEY){
                 if(llSameGroup(kID))return CMD_GROUP;
             }
 
-            if(g_iPublic)return CMD_EVERYONE;
-        } else if(!in_range(kID) && !iVerbose){
             if(g_iPublic)return CMD_EVERYONE;
         }else{
             if(iVerbose)
@@ -215,7 +214,7 @@ key g_kAddonPending;
 string g_sAddonName;
 key g_kWearer;
 list g_lMenuIDs;
-integer g_iMenuStride = 3;
+integer g_iMenuStride;
 integer g_iLocked=FALSE;
 
 integer ALIVE = -55;

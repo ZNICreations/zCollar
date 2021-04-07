@@ -8,8 +8,6 @@ Copyright ©2021
 
 Aria (Tashia Redrose)
     * April 2021    -       License Changed to zCollar License w/ GPLv3
-            ** zCollar License: This file is derived from OpenCollar, and must stay OpenSource, however, due to conflicts with the original author and the OpenCollar project, any files utilizing the zCollar license are prohibited from being adopted by the OpenCollar project, including but not limited to changes made via this fork.
-
     *June 2020       -       Created oc_core
       * This combines oc_com, oc_auth, and oc_sys
     * July 2020     -       Maintenance fixes, feature implementations
@@ -18,7 +16,7 @@ Aria (Tashia Redrose)
 et al.
 
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/OpenCollarTeam/OpenCollar
+https://github.com/zontreck/zCollar
 
 */
 
