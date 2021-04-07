@@ -1,17 +1,17 @@
 /*
-This file is a part of OpenCollar.
+This file is a part of zCollar.
 Copyright 2021
 
 : Contributors :
 
 Aria (Tashia Redrose)
-    * March 2021         - Rewrote oc_update_shim
+    * March 2021         - Created zc_update_shim
 
 et al.
 
 
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/OpenCollarTeam/OpenCollar
+https://github.com/zontreck/zCollar
 */
 
 
@@ -162,7 +162,7 @@ default
         } else if(iNum == LOADPIN)
         {
             list lTmp = llParseString2List(sStr, ["@"],[]);
-            llRemoteLoadScriptPin(kID, "oc_linkprim_hammer", (integer)llList2String(lTmp,0), TRUE, 825);
+            llRemoteLoadScriptPin(kID, "zc_linkprim_hammer", (integer)llList2String(lTmp,0), TRUE, 825);
         }
     }
     listen(integer c,string n,key i,string m)

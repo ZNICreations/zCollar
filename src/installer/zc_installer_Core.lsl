@@ -1,17 +1,17 @@
 /*
-This file is a part of OpenCollar.
+This file is a part of zCollar.
 Copyright 2021
 
 : Contributors :
 
 Aria (Tashia Redrose)
-    * March 2021         - Rewrote oc_installer_Core
+    * March 2021         - Created zc_installer_Core
 
 et al.
 
 
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/OpenCollarTeam/OpenCollar
+https://github.com/zontreck/zCollar
 */
 
 integer g_iUpdateChan = -7483213;
@@ -65,7 +65,7 @@ TurnOffNonInstaller()
     {
         string name = llGetInventoryName(INVENTORY_SCRIPT, i);
         list lParts = llParseString2List(name, ["_"],[]);
-        if(llList2String(lParts,0)=="oc" && llList2String(lParts,1)=="installer"){
+        if(llList2String(lParts,0)=="zc" && llList2String(lParts,1)=="installer"){
             llSetScriptState(name, TRUE);
         }
         else{
@@ -91,6 +91,11 @@ PermChecks()
                 g_iUpdater=FALSE;
             }
 
+        } else if(llList2String(lParts,0) == "zc"){
+            if(getperms(name)!="full"){
+                llWhisper(0, "FATAL: "+name+" is not full perm, this is a violation of the zCollar License. Current permissions: "+getperms(name));
+                g_iUpdater=FALSE;
+            }
         }
     }
 }
@@ -430,7 +435,7 @@ default
                 if(!g_iLegacyUpdate){
                     g_kCollar = i;
                     g_iUpdatePin = (integer)llList2String(lParam,1);
-                    llRemoteLoadScriptPin(i, "oc_update_shim", g_iUpdatePin, TRUE, 0); // 0 = from installer itself, 1 = from relay orb.
+                    llRemoteLoadScriptPin(i, "zc_update_shim", g_iUpdatePin, TRUE, 0); // 0 = from installer itself, 1 = from relay orb.
                 }else{
                     // Do bundle!
                     g_iBundleNumber=999;
@@ -459,7 +464,7 @@ default
             {
                 //llSay(0, "Relay is ready to enter stage 2");
                 //llSay(0, "Sending shim to relay");
-                llGiveInventory(g_kRelay, "oc_update_shim");
+                llGiveInventory(g_kRelay, "zc_update_shim");
                 llRegionSayTo(g_kRelay, g_iUpdateChan+1, "ShimSent|"+(string)g_kRelayTarget+"|"+UPDATE_VERSION);
                 // We do not yet have the collar's update pin. The relay will obtain this information so it can install the shim and get things moving!
             }
@@ -498,7 +503,7 @@ default
                 g_iPromptListen = llListen(g_iPromptChannel, "", llGetOwnerKey(i), "");
                 g_kPrompt = llGetOwnerKey(i);
                 llResetTime();
-                g_sPrompt="[OpenCollar Installer]\n \nCurrent Item: "+llList2String(lOpt,1)+"\n\nThis item is not currently installed. It is optional, would you like to install this script?\n\n* Do not use the ignore button, installation cannot proceed without a response";
+                g_sPrompt="[zCollar Installer]\n \nCurrent Item: "+llList2String(lOpt,1)+"\n\nThis item is not currently installed. It is optional, would you like to install this script?\n\n* Do not use the ignore button, installation cannot proceed without a response";
                 g_lPrompt = ["Install", "Skip"];
                 llDialog(llGetOwnerKey(i), g_sPrompt, g_lPrompt, g_iPromptChannel);
                 g_kPrompt_tmpID = (key)llList2String(lOpt,2);
@@ -514,7 +519,7 @@ default
                 g_iPromptListen = llListen(g_iPromptChannel, "", llGetOwnerKey(i), "");
                 g_kPrompt = llGetOwnerKey(i);
                 llResetTime();
-                g_sPrompt="[OpenCollar Installer]\n \nCurrent Item: "+llList2String(lOpt,1)+"\n\nThis item is currently installed. It is optional, would you like to uninstall this script?\n\n* Do not use the ignore button, installation cannot proceed without a response";
+                g_sPrompt="[zCollar Installer]\n \nCurrent Item: "+llList2String(lOpt,1)+"\n\nThis item is currently installed. It is optional, would you like to uninstall this script?\n\n* Do not use the ignore button, installation cannot proceed without a response";
                 g_lPrompt = ["Remove", "Skip"];
                 llDialog(llGetOwnerKey(i), g_sPrompt, g_lPrompt, g_iPromptChannel);
                 g_kPrompt_tmpID = (key)llList2String(lOpt,2);
