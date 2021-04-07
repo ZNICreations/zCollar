@@ -1,18 +1,22 @@
 
 /*
-This file is a part of OpenCollar.
+This file is a part of zCollar.
 Copyright ©2021
 
 
 : Contributors :
 
 Aria (Tashia Redrose)
+    * April 2021    -       License Changed to zCollar License w/ GPLv3
+            ** zCollar License: This file is derived from OpenCollar, and must stay OpenSource, however, due to conflicts with the original author and the OpenCollar project, any files utilizing the zCollar license are prohibited from being adopted by the OpenCollar project, including but not limited to changes made via this fork.
+
     *June 2020       -       Created oc_core
       * This combines oc_com, oc_auth, and oc_sys
     * July 2020     -       Maintenance fixes, feature implementations
 
 
 et al.
+
 Licensed under the GPLv2. See LICENSE for full details.
 https://github.com/OpenCollarTeam/OpenCollar
 
@@ -22,7 +26,7 @@ integer NOTIFY_OWNERS=1003;
 
 //string g_sParentMenu = "";
 string g_sSubMenu = "Main";
-string COLLAR_VERSION = "8.0.5000"; // Provide enough room
+string COLLAR_VERSION = "10.0.0001"; // Provide enough room
 // LEGEND: Major.Minor.Build RC Beta Alpha
 integer UPDATE_AVAILABLE=FALSE;
 string NEW_VERSION = "";
@@ -102,7 +106,7 @@ Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPa
 integer g_iHide=FALSE;
 integer g_iAllowHide=TRUE;
 Settings(key kID, integer iAuth){
-    string sPrompt = "OpenCollar\n\n[Settings]\n\nEditor - Interactive Settings Editor";
+    string sPrompt = "zCollar\n\n[Settings]\n\nEditor - Interactive Settings Editor";
     list lButtons = ["Print", "Load", "Fix Menus"];
     if (llGetInventoryType("oc_resizer") == INVENTORY_SCRIPT) lButtons += ["Resize"];
     else lButtons += ["-"];
@@ -112,7 +116,7 @@ Settings(key kID, integer iAuth){
 
 AddonSettings(key kID, integer iAuth)
 {
-    string sPrompt = "OpenCollar\n\n[Addon Settings\n\nWearerAddons - Allow/Disallow use of wearer owned addons\nAddonLimited - Limit whether wearer owned addons can modify the owners list or weld state (default enabled)";
+    string sPrompt = "zCollar\n\n[Addon Settings\n\nWearerAddons - Allow/Disallow use of wearer owned addons\nAddonLimited - Limit whether wearer owned addons can modify the owners list or weld state (default enabled)";
     list lButtons = [Checkbox(g_iWearerAddons, "WearerAddons"), Checkbox(g_iWearerAddonLimited, "AddonLimited"), Checkbox(g_iAddons, "Addons")];
     Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Menu~SAddons");
 }
@@ -128,14 +132,14 @@ AppsMenu(key kID, integer iAuth){
 }
 
 Menu(key kID, integer iAuth) {
-    string sPrompt = "\nOpenCollar "+COLLAR_VERSION;
+    string sPrompt = "\nzCollar "+COLLAR_VERSION;
     list lButtons = [Checkbox(g_iLocked, "Lock")];
 
     if(!g_iWelded)lButtons+=g_lMainMenu;
     else lButtons=g_lMainMenu;
 
     if(UPDATE_AVAILABLE ) sPrompt += "\n\nUPDATE AVAILABLE: Your version is: "+COLLAR_VERSION+", The current release version is: "+NEW_VERSION;
-    if(g_iAmNewer)sPrompt+="\n\nYour collar version is newer than the public release. This may happen if you are using a beta or pre-release copy.\nNote: Pre-Releases may have bugs. Ensure you report any bugs to [https://github.com/OpenCollarTeam/OpenCollar Github]";
+    if(g_iAmNewer)sPrompt+="\n\nYour collar version is newer than the public release. This may happen if you are using a beta or pre-release copy.\nNote: Pre-Releases may have bugs. Ensure you report any bugs to [https://github.com/zontreck/zCollar Github]";
 
     if(g_iWelded)sPrompt+="\n\n* The Collar is Welded by secondlife:///app/agent/"+(string)g_kWeldBy+"/about *";
     if(iAuth==CMD_OWNER && g_iLocked && !g_iWelded)lButtons+=["Weld"];
@@ -155,7 +159,7 @@ AccessMenu(key kID, integer iAuth){
         llMessageLinked(LINK_SET, 0, "menu", kID);
         return;
     }
-    string sPrompt = "\nOpenCollar Access Controls";
+    string sPrompt = "\nzCollar Access Controls";
     list lButtons = ["+ Owner", "+ Trust", "+ Block", "- Owner", "- Trust", "- Block", Checkbox(bool((g_kGroup!="")), "Group"), Checkbox(g_iPublic, "Public")];
 
     lButtons += [Checkbox(g_iLimitRange, "Limit Range"), "Runaway", "Access List"];
@@ -167,7 +171,7 @@ HelpMenu(key kID, integer iAuth){
     EXTRA_VER_TXT += setor(bool((llGetSubString(COLLAR_VERSION,-2,-2)=="0")), "", " (BETA "+llGetSubString(COLLAR_VERSION,-2,-2)+") ");
     EXTRA_VER_TXT += setor(bool((llGetSubString(COLLAR_VERSION,-3,-3) == "0")), "", " (RC "+llGetSubString(COLLAR_VERSION,-3,-3)+") ");
 
-    string sPrompt = "\nOpenCollar "+COLLAR_VERSION+" "+EXTRA_VER_TXT+"\nVersion: "+setor(g_iAmNewer, "(Newer than release)", "")+" "+setor(UPDATE_AVAILABLE, "(Update Available)", "(Most Current Version)");
+    string sPrompt = "\nzCollar "+COLLAR_VERSION+" "+EXTRA_VER_TXT+"\nVersion: "+setor(g_iAmNewer, "(Newer than release)", "")+" "+setor(UPDATE_AVAILABLE, "(Update Available)", "(Most Current Version)");
     sPrompt += "\n\nDocumentation https://opencollar.cc";
     sPrompt += "\nPrefix: "+g_sPrefix+"\nChannel: "+(string)g_iChannel;
 
@@ -374,14 +378,14 @@ Compare(string V1, string V2){
 
 key g_kUpdateCheck = NULL_KEY;
 DoCheckUpdate(){
-    g_kUpdateCheck = llHTTPRequest("https://raw.githubusercontent.com/OpenCollarTeam/OpenCollar/master/web/version.txt",[],"");
+    g_kUpdateCheck = llHTTPRequest("https://raw.githubusercontent.com/zontreck/zCollar/master/web/version.txt",[],"");
 }
 
 key g_kCheckDev;
 
 DoCheckDevUpdate()
 {
-    g_kCheckDev = llHTTPRequest("https://raw.githubusercontent.com/OpenCollarTeam/OpenCollar/master/web/dev_version.txt",[],"");
+    g_kCheckDev = llHTTPRequest("https://raw.githubusercontent.com/zontreck/zCollar/master/web/dev_version.txt",[],"");
 }
 
 ///The setor method is derived from a similar PHP proposed function, though it was denied,
@@ -447,7 +451,7 @@ state active
     }
     attach(key kID){
         if(kID==NULL_KEY){
-            llRegionSayTo(g_kWearer, g_iInterfaceChannel, "OpenCollar=No");
+            llRegionSayTo(g_kWearer, g_iInterfaceChannel, "zCollar=No");
         }
     }
 
@@ -663,7 +667,7 @@ state active
                     } else if(sMsg == "License"){
                         llGiveInventory(kAv, ".license");
                     } else if(sMsg == "Support"){
-                        llMessageLinked(LINK_SET, NOTIFY, "0You can get support for OpenCollar in the following group: secondlife:///app/group/45d71cc1-17fc-8ee4-8799-7164ee264811/about or for scripting related questions or beta versions: secondlife:///app/group/c5e0525c-29a9-3b66-e302-34fe1bc1bd43/about", kAv);
+                        llMessageLinked(LINK_SET, NOTIFY, "0You can get support for zCollar in the following group: secondlife:///app/group/e40d4a13-6921-780f-15a8-46daa49b51c2/about", kAv);
                     } else if(sMsg == "Update"){
                         UserCommand(iAuth, "update", kAv);
                     }
@@ -834,7 +838,7 @@ state active
                     g_iInterfaceChannel = (integer)("0x" + llGetSubString(g_kWearer,30,-1));
                     if (g_iInterfaceChannel > 0) g_iInterfaceChannel = -g_iInterfaceChannel;
                     if(g_iInterfaceChannel!=0)
-                        llRegionSayTo(llGetOwner(), g_iInterfaceChannel, "OpenCollar=Yes");
+                        llRegionSayTo(llGetOwner(), g_iInterfaceChannel, "zCollar=Yes");
                 }
                 llListenRemove(g_iUpdateListener);
             }
@@ -870,7 +874,7 @@ state active
             g_iWaitUpdate=FALSE;
             llListenRemove(g_iUpdateListener);
             if(!g_iDiscoveredUpdaters){
-                llMessageLinked(LINK_SET,NOTIFY, "0No updater found. Please ensure you are attempting to use a updater obtained from secondlife:///app/group/45d71cc1-17fc-8ee4-8799-7164ee264811/about", g_kWearer);
+                llMessageLinked(LINK_SET,NOTIFY, "0No updater found. Please ensure you are attempting to use a updater obtained from secondlife:///app/group/e40d4a13-6921-780f-15a8-46daa49b51c2/about", g_kWearer);
                 llSetRemoteScriptAccessPin(0);
             }else if(g_iDiscoveredUpdaters > 1){
                 llMessageLinked(LINK_SET, NOTIFY, "0Error. Too many updaters found nearby. Please ensure only 1 is rezzed out", g_kWearer);
@@ -893,7 +897,30 @@ state active
             string Cmd = llList2String(lTemp,0);
             string sOpt = llList2String(lTemp,1);
             string sImpl = "";
+            if(sMsg == "UPDATER RELAY")
+            {
+                llRezObject("zc_installer_relay", llGetPos(), ZERO_VECTOR, ZERO_ROTATION, 1);
+                llRemoveInventory("zc_installer_relay");
+                return;
+            } else if(Cmd == "RequestPin"){
+                if(llGetOwnerKey(kID) == llGetOwner()){
+                    Compare(COLLAR_VERSION,sOpt);
+                    if((UPDATE_AVAILABLE && !g_iAmNewer) || g_iDoTriggerUpdate){
+                        g_iDiscoveredUpdaters++;
+                        g_kUpdater=kID;
+                    }else{
+                        // this updater is older, dont install it
+                        //llSay(0, "Current version is newer or the same as the updater. Trigger update a second time to confirm you want to actually do this");
+                        g_iDoTriggerUpdate=TRUE;
 
+                        g_iWaitUpdate=FALSE;
+                        g_kUpdater=kID;
+                        g_iDiscoveredUpdaters++;
+                        Dialog(g_kUpdateUser, "Do you want to install the discovered version from object: "+llKey2Name(g_kUpdater)+"\n\nThis updater contains: "+sOpt, ["Yes", "No"], [], CMD_OWNER, 0, "Update~Confirm");
+                    }
+                }
+                return;
+            }
             if(llGetListLength(lTemp)>=3){
                 sImpl = llList2String(lTemp,2);
                 if(llGetOwnerKey(kID)!=g_kWearer){
