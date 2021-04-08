@@ -358,6 +358,8 @@ default
             g_kSettingsCard = llGetInventoryKey(g_sSettings);
             UpdateDSRequest(NULL, llGetNotecardLine(g_sSettings,0), "read_settings:0");
         }
+
+        Send("type=LIST", "lst");
     }
 
     changed(integer iChange){
@@ -385,6 +387,7 @@ default
         if(HasDSRequest(kID)!=-1){
 
             list lDat = llParseStringKeepNulls(sBody, [";;"],[]);
+            //llOwnerSay(sBody);
             // Intentionally parse for double semi-colon, as some parameters use different delimiters
             string Script = llList2String(lDat,0);
             string sType = llList2String(lDat,1);
@@ -403,6 +406,16 @@ default
                     if(llList2String(meta,0)=="all"){
                         integer lastMin = (integer)llList2String(meta,1);
                         lastMin+=10;
+                        // Iterate over the results
+                        list lSet = llParseStringKeepNulls(llList2String(lDat, 3), ["~"],[]);
+                        integer i=0;
+                        integer end = llGetListLength(lSet);
+                        for(i=0;i<end;i++)
+                        {
+                            //
+                            list llDat = llParseStringKeepNulls(llList2String(lSet,i), [";"],[]);
+                            llMessageLinked(LINK_SET, LM_SETTING_RESPONSE, llList2String(llDat,0)+"_"+llList2String(llDat,1)+"="+llList2String(llDat,2), "");
+                        }
                         if(lastMin>=g_iTotalSettings)
                         {
                             // Startup completed
