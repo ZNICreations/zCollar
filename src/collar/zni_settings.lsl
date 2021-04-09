@@ -17,6 +17,35 @@ https://github.com/zontreck/zCollar
 */
 string SERVER = "";
 
+list g_lReqs;
+SendX(string Req,string method, string meta){
+    g_lReqs += [Req, method, meta];
+    if(g_iVerbosity>=3)llOwnerSay("Queued Request: "+Req+" ~ "+meta);
+    Sends(NULL_KEY);
+}
+Sends(key kNum){
+    if(g_kCurrentReq == kNum){
+        DoNextRequest();
+    }
+
+    if(llGetListLength(g_lReqs)==0)g_kCurrentReq=NULL_KEY;
+    //g_lReqs += [llHTTPRequest(URL + llList2String(lTmp,0), [HTTP_METHOD, "POST", HTTP_MIMETYPE, "application/x-www-form-urlencoded"], llDumpList2String(llList2List(lTmp,1,-1), "?"))];
+}
+
+key g_kCurrentReq = NULL_KEY;
+integer DEBUG=FALSE;
+DoNextRequest(){
+    if(llGetListLength(g_lReqs)==0)return;
+    list lTmp = llParseString2List(llList2String(g_lReqs,0),["?"],[]);
+    if(g_iVerbosity>=4)llOwnerSay("SENDING REQUEST: "+SERVER+llList2String(g_lReqs,0));
+
+    string append = "";
+    if(llList2String(g_lReqs,1) == "GET")append = "?"+llDumpList2String(llList2List(lTmp,1,-1),"?");
+
+    g_kCurrentReq=llHTTPRequest(SERVER + llList2String(lTmp,0) + append, [HTTP_METHOD, llList2String(g_lReqs,1), HTTP_MIMETYPE, "application/x-www-form-urlencoded"], llDumpList2String(llList2List(lTmp,1,-1),"?"));
+    UpdateDSRequest(NULL, g_kCurrentReq, llList2String(g_lReqs,2));
+}
+
 
 integer TIMEOUT_REGISTER = 30498;
 integer TIMEOUT_FIRED = 30499;
@@ -93,7 +122,8 @@ integer DIALOG_TIMEOUT = -9002;
 //string ALL = "ALL";
 
 Send(string args, string meta){
-    UpdateDSRequest(NULL, llHTTPRequest(SERVER+"/Collar_Settings.php", [HTTP_METHOD, "POST", HTTP_MIMETYPE, "application/x-www-form-urlencoded"], args), meta);
+    SendX("/Collar_Settings.php?"+args, "POST", meta);
+    //UpdateDSRequest(NULL, llHTTPRequest(SERVER+"/Collar_Settings.php", [HTTP_METHOD, "POST", HTTP_MIMETYPE, "application/x-www-form-urlencoded"], args), meta);
 }
 
 integer g_iTotalSettings;
@@ -188,7 +218,7 @@ DeleteWeldFlag()
     llSetLinkPrimitiveParams(g_iWeldStorage, [PRIM_DESC, llDumpList2String(lPara,"~")]);
 }
 
-string g_sSettings = ".settings";
+string g_sSettings = "settings";
 
 
 integer iSetor(integer test,integer a,integer b){
@@ -214,6 +244,8 @@ UserCommand(integer iNum, string sStr, key kID) {
     if(sLower == "print settings" || sLower == "debug settings"){
         /*if(AuthCheck(iNum))PrintAll(kID, llGetSubString(sLower,0,4));
         else Error(kID, sStr);*/
+        llMessageLinked(LINK_SET, NOTIFY, "0zCollar Settings:", kID);
+        Send("type=LIST", sLower+" "+(string)kID);
     }
     else if(llGetSubString(sLower,0,5) == "reboot")
     {
@@ -303,7 +335,7 @@ ProcessSettingLine(string sLine)
                         ),
                     uSubStringLastIndex(sLine,"#"), -1)
                 )
-            ,[],["=","+"]);
+            ,[],["_","+"]);
     list l2 = llParseString2List(llDumpList2String(llList2List(lTmp,2,-1),""), ["~"],[]);
     integer iAppendMode = iSetor((llList2String(lTmp,1)=="+"),TRUE,FALSE);
 
@@ -319,6 +351,7 @@ ProcessSettingLine(string sLine)
             if(llList2String(lTmp,0)=="settings" && llList2String(l2,i)=="nocomma"){
                 g_iNoComma=(integer)llList2String(l2,i+1);
             }
+            llMessageLinked(LINK_SET, LM_SETTING_SAVE, llList2String(lTmp,0)+"_"+llList2String(l2,i)+"="+llList2String(l2,i+1), "origin");
             //g_lSettings = SetSetting(llList2String(lTmp,0)+"_"+llList2String(l2,i), llList2String(l2,i+1));
         }
     } else {
@@ -334,6 +367,8 @@ ProcessSettingLine(string sLine)
             */
             //llOwnerSay(llList2String(lTmp,0)+"+"+llList2String(l2,i)+"="+llList2String(l2,i+1));
             //g_lSettings = SetSetting(sToken,sValCur);
+
+            // TODO: Implement Append Mode in Collar_Settings.php
         }
 
     }
@@ -341,6 +376,24 @@ ProcessSettingLine(string sLine)
 }
 list g_lMenuIDs;
 integer g_iMenuStride;
+
+integer g_iStartup=TRUE;
+
+string g_sStack;
+
+integer g_iVerbosity = 1;
+integer CheckModifyPerm(string sSetting, key kStr)
+{
+    sSetting = llToLower(sSetting);
+    list lTmp = llParseString2List(sSetting,["_", "="],[]);
+    if(llList2String(lTmp,0)=="auth") // Protect the auth settings against manual editing via load url or via the settings editor
+    {
+        if(kStr == "origin")return TRUE;
+        else return FALSE;
+    }
+    if(kStr == "url" && llList2String(lTmp,0) == "intern")return FALSE;
+    return TRUE;
+}
 default
 {
     state_entry()
@@ -378,7 +431,28 @@ default
     {
         if(HasDSRequest(kID)!=-1)
         {
-            // nothing here yet
+            list lMeta = llParseString2List(GetDSMeta(kID), [":"], []);
+            if(llList2String(lMeta,0) == "read_settings")
+            {
+                integer iLine = (integer)llList2String(lMeta,1);
+                iLine ++;
+                if(sData == EOF)
+                {
+                    // Settings completely read!
+                    DeleteDSReq(kID);
+                    // begin requesting all settings
+                    if(!g_iStartup)
+                        llMessageLinked(LINK_SET, LM_SETTING_REQUEST, "ALL", "");
+
+                    llMessageLinked(LINK_SET, NOTIFY, "0Settings Notecard Imported", g_kWearer);
+                }
+                else{
+                    // Parse the settings line
+                    // utilize the save function inside the LMs
+                    //llMessageLinked(LINK_SET, LM_SETTING_SAVE, sData, "origin");
+                    ProcessSettingLine(sData);
+                }
+            }
         }
     }
 
@@ -387,6 +461,10 @@ default
         if(HasDSRequest(kID)!=-1){
 
             list lDat = llParseStringKeepNulls(sBody, [";;"],[]);
+            g_lReqs = llDeleteSubList(g_lReqs,0,2);
+            llSleep(0.25);
+
+            if(g_iVerbosity>=3)llOwnerSay("HTTP ("+(string)iStat+")\n\n"+sBody);
             //llOwnerSay(sBody);
             // Intentionally parse for double semi-colon, as some parameters use different delimiters
             string Script = llList2String(lDat,0);
@@ -410,32 +488,96 @@ default
                         list lSet = llParseStringKeepNulls(llList2String(lDat, 3), ["~"],[]);
                         integer i=0;
                         integer end = llGetListLength(lSet);
+                        list lMode;
+                        if(llList2String(meta,2) != "lst")
+                        {
+                            lMode = llParseString2List(llList2String(meta,2), [" "],[]);
+                        }
                         for(i=0;i<end;i++)
                         {
                             //
                             list llDat = llParseStringKeepNulls(llList2String(lSet,i), [";"],[]);
-                            llMessageLinked(LINK_SET, LM_SETTING_RESPONSE, llList2String(llDat,0)+"_"+llList2String(llDat,1)+"="+llList2String(llDat,2), "");
+                            if(llGetListLength(lMode)==0)
+                                llMessageLinked(LINK_SET, LM_SETTING_RESPONSE, llList2String(llDat,0)+"_"+llList2String(llDat,1)+"="+llList2String(llDat,2), "");
+                            else
+                            {
+                                if(llList2String(llDat,0)=="intern" && llList2String(lMode,0)=="print"){}else{
+                                    g_sStack += llList2String(llDat,0)+"_"+llList2String(llDat,1)+"="+llList2String(llDat,2)+"\n";
+                                }
+
+                                if(llStringLength(g_sStack)>=900){
+                                    llMessageLinked(LINK_SET, NOTIFY, "0.\n"+g_sStack, (key)llList2String(lMode,2));
+                                    g_sStack="";
+                                }
+                            }
                         }
-                        if(lastMin>=g_iTotalSettings)
+                        if((1+lastMin)>=g_iTotalSettings)
                         {
                             // Startup completed
-                            llMessageLinked(LINK_SET, NOTIFY, "0Startup Complete", llGetOwner());
-                            llMessageLinked(LINK_SET, LM_SETTING_RESPONSE, "settings=sent", "");
+                            if(g_iStartup){
+                                g_iStartup=FALSE;
+                                llMessageLinked(LINK_SET, NOTIFY, "0Startup Complete", llGetOwner());
+                            }
+                            if(llGetListLength(lMode)==0)
+                                llMessageLinked(LINK_SET, LM_SETTING_RESPONSE, "settings=sent", "");
+                            else{
+                                llMessageLinked(LINK_SET, NOTIFY,"0.\n"+g_sStack, (key)llList2String(lMode,2));
+                                g_sStack="";
+
+                                llMessageLinked(LINK_SET, NOTIFY, "0Done Printing Settings", (key)llList2String(lMode,2));
+                            }
+
                         }else{
                             // Request next batch
-                            Send("type=ALL&minimum="+(string)lastMin+"&maximum=10", "all:"+(string)lastMin);
+                            Send("type=ALL&minimum="+(string)lastMin+"&maximum=10", "all:"+(string)lastMin+":"+llList2String(meta,2));
                         }
                     }
                 } else if(sType == "NB")
                 {
                     g_iTotalSettings = (integer)llList2String(lDat,2);
                     if(g_iTotalSettings==0){
+                        if(GetDSMeta(kID)!="lst"){
+                            list lMeta = llParseString2List(GetDSMeta(kID), [" "],[]);
+                            llMessageLinked(LINK_SET, NOTIFY, "0Done Printing Settings", llList2String(lMeta, 2));
+                        }
                         llMessageLinked(LINK_SET, LM_SETTING_RESPONSE, "settings=sent", "");
-                    }else Send("type=ALL&minimum=0&maximum=10", "all:0");
+                    }else Send("type=ALL&minimum=0&maximum=10", "all:0:"+GetDSMeta(kID));
                 }
             }
             // we dont need to update the request here
             DeleteDSReq(kID);
+            Sends(g_kCurrentReq);
+        } else{
+            if(kID == g_kLoadURL)
+            {
+                g_kLoadURL = NULL_KEY;
+
+                list lSettings = llParseString2List(sBody, ["\n"],[]);
+                integer i=0;
+                integer iErrorLevel=0;
+                if(lSettings){
+                    do{
+                        if(CheckModifyPerm(llList2String(lSettings,0), "url") || g_iLoadURLConsented) {
+                            // permissions to modify this setting passed the security policy.
+                            ProcessSettingLine(llList2String(lSettings,0));
+                        } else
+                            iErrorLevel++;
+
+                        lSettings = llDeleteSubList(lSettings,0,0);
+                        i=llGetListLength(lSettings);
+                    } while(i);
+                }else llMessageLinked(LINK_SET, NOTIFY, "0Empty URL loaded. No settings changes have been made", g_kLoadURLBy);
+
+                if(g_iLoadURLConsented)g_iLoadURLConsented=FALSE;
+                if(iErrorLevel > 0){
+                    llMessageLinked(LINK_SET, NOTIFY, "1Some settings were not loaded due to the security policy. The wearer has been asked to review the URL and give consent", g_kLoadURLBy);
+                    // Ask wearer for consent
+                    Dialog(g_kWearer, "[Settings URL Loader]\n\n"+(string)iErrorLevel+" settings were not loaded from "+g_sLoadURL+".\nReason: Security Policy\n\nLoaded by: secondlife:///app/agent/"+(string)g_kLoadURLBy+"/about\n\nPlease review the url before consenting", ["ACCEPT", "DECLINE"], [], 0, CMD_WEARER, "Consent~LoadURL");
+                }
+
+                llMessageLinked(LINK_SET, NOTIFY, "1Settings have been loaded", g_kLoadURLBy);
+                Send("type=LIST", "lst");
+            }
         }
     }
 
@@ -444,21 +586,44 @@ default
         if(iNum == LM_SETTING_SAVE)
         {
             list lPar = llParseString2List(sMsg, ["_","="],[]);
-            Send("type=PUT&token="+llList2String(lPar,0)+"&var="+llList2String(lPar,1)+"&val="+llList2String(lPar,2), "set");
+
+            if(kID != "origin" && (llToLower(llList2String(lPar,0)) == "auth" || llToLower(llList2String(lPar,0))=="intern")){
+                // silently deny!
+                return;
+            }
+
+
+            Send("type=PUT&token="+llToLower(llList2String(lPar,0))+"&var="+llToLower(llList2String(lPar,1))+"&val="+llList2String(lPar,2), "set");
         } else if(iNum == LM_SETTING_REQUEST)
         {
-            // TODO: Add a ALL request handler
             list lPar = llParseString2List(sMsg, ["_"],[]);
             if(sMsg!="ALL")
                 Send("type=GET&token="+llList2String(lPar,0)+"&var="+llList2String(lPar,1), "get");
             else
-                Send("type=LIST", "list");
+                Send("type=LIST", "lst");
                 //Send("type=ALL&minimum=0&maximum=10", "all:0");
         } else if(iNum == LM_SETTING_DELETE)
         {
             list lPar = llParseString2List(sMsg, ["_"],[]);
-            Send("type=DELETE&token="+llList2String(lPar,0)+"&var="+llList2String(lPar,1), "delete");
+            if(kID != "origin" && (llToLower(llList2String(lPar,0)) == "auth" || llToLower(llList2String(lPar,0))=="intern")){
+                // silently deny!
+                return;
+            }
+            Send("type=DELETE&token="+llToLower(llList2String(lPar,0))+"&var="+llToLower(llList2String(lPar,1)), "delete");
         } else if(iNum >= CMD_OWNER && iNum <= CMD_EVERYONE) UserCommand(iNum, sMsg, kID);
+        else if(iNum == LM_SETTING_RESPONSE)
+        {
+            list lPar = llParseString2List(sMsg, ["_", "="],[]);
+            string sToken = llList2String(lPar,0);
+            string sVar = llList2String(lPar,1);
+            if(sToken == "global")
+            {
+                if(sVar == "verbosity")
+                {
+                    g_iVerbosity = (integer)llList2String(lPar,2);
+                }
+            }
+        }
         //else if(iNum == MENUNAME_REQUEST && sStr == g_sParentMenu)
         //    llMessageLinked(iSender, MENUNAME_RESPONSE, g_sParentMenu+"|"+ g_sSubMenu,"");
         else if(iNum == DIALOG_RESPONSE){
@@ -496,6 +661,9 @@ default
             g_lMenuIDs = llDeleteSubList(g_lMenuIDs, iMenuIndex - 1, iMenuIndex +3);  //remove stride from g_lMenuIDs
         } else if(iNum == TIMEOUT_FIRED){
             if(sMsg == "check_weld")CheckForAndSaveWeld();
+        } else if(iNum == REBOOT)
+        {
+            llResetScript();
         }
     }
 }

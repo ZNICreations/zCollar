@@ -1,15 +1,16 @@
 /*
-This file is a part of OpenCollar.
+This file is a part of zCollar.
 Copyright ©2021
 
 : Contributors :
 
 Aria (Tashia Redrose)
+    * April 2021    -       Rebranded under zCollar
     *Jan 2021       -       Created optional app for notification on owner login
-    
+
 et al.
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/OpenCollarTeam/OpenCollar
+https://github.com/zontreck/zCollar
 */
 
 string g_sParentMenu = "Apps";
@@ -29,6 +30,7 @@ integer CMD_WEARER = 503;
 integer CMD_NOACCESS=599;
 
 integer NOTIFY = 1002;
+integer NOTIFY_OWNER = 1003;
 integer REBOOT = -1000;
 
 integer LM_SETTING_SAVE = 2000;//scripts send messages on this channel to have settings saved
@@ -71,10 +73,11 @@ Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPa
     if (~iIndex) g_lMenuIDs = llListReplaceList(g_lMenuIDs, [kID, kMenuID, sName], iIndex, iIndex + g_iMenuStride - 1);
     else g_lMenuIDs += [kID, kMenuID, sName];
 }
+integer g_iNotifyOwner = 0; // This could get spammy!
 
 Menu(key kID, integer iAuth) {
-    string sPrompt = "\n[Owner Online Checker App]\n\nSet Interval\t\t- Default (60); Current ("+(string)g_iInterval+")\nNotifChat\t\t- Notification in local chat (private)\nNotifDialog\t\t- Notification in a dialog box\n\n\n* Note: This app can be fully controlled by the collar wearer";
-    list lButtons = [Checkbox(g_iEnable, "ON"), "Set Interval", Checkbox(g_iTypeLocal, "NotifChat"), Checkbox(g_iTypeDialog, "NotifDialog")];
+    string sPrompt = "\n[Owner Online Checker App]\n\nSet Interval\t\t- Default (60); Current ("+(string)g_iInterval+")\nNotifChat\t\t- Notification in local chat (private)\nNotifDialog\t\t- Notification in a dialog box\nNotifOwner\t\t- Notification on sub login is sent to the collar owner(s)\n\n\n* Note: This app can be fully controlled by the collar wearer";
+    list lButtons = [Checkbox(g_iEnable, "ON"), "Set Interval", Checkbox(g_iTypeLocal, "NotifChat"), Checkbox(g_iTypeDialog, "NotifDialog"), Checkbox(g_iNotifyOwner, "NotifOwner")];
     Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Menu~Main");
 }
 
@@ -87,7 +90,7 @@ UserCommand(integer iNum, string sStr, key kID) {
     if (llToLower(sStr)==llToLower(g_sSubMenu) || llToLower(sStr) == "menu "+llToLower(g_sSubMenu)) Menu(kID, iNum);
     //else if (iNum!=CMD_OWNER && iNum!=CMD_TRUSTED && kID!=g_kWearer) RelayNotify(kID,"Access denied!",0);
     else {
-        //integer iWSuccess = 0; 
+        //integer iWSuccess = 0;
         //string sChangetype = llList2String(llParseString2List(sStr, [" "], []),0);
         //string sChangevalue = llList2String(llParseString2List(sStr, [" "], []),1);
         //string sText;
@@ -146,7 +149,7 @@ UpdateOwner(key ID, integer online)
     if(index==-1) g_lOwners += [ID, online];
     else {
         integer lastState = (integer)llList2String(g_lOwners,index+1);
-        
+
         //llSay(0, "UPDATE called ("+(string)lastState+", "+(string)lastRegion+") [secondlife:///app/agent/"+(string)ID+"/about] = ("+(string)online+", "+(string)inRegion+")");
         if(lastState==online){}
         else {
@@ -165,9 +168,15 @@ UpdateOwner(key ID, integer online)
 integer ALIVE = -55;
 integer READY = -56;
 integer STARTUP = -57;
+
+
+integer g_iStartup = TRUE;
 default
 {
     on_rez(integer iNum){
+        if(g_iNotifyOwner){
+            llMessageLinked(LINK_SET, NOTIFY_OWNER, "%WEARERNAME% has logged in, or rezzed the collar", "");
+        }
         llResetScript();
     }
     state_entry(){
@@ -195,7 +204,7 @@ state active
         g_kWearer = llGetOwner();
         llMessageLinked(LINK_SET, LM_SETTING_REQUEST, "global_locked","");
     }
-    
+
     timer(){
         if(g_iEnable){
             llSetTimerEvent(g_iInterval);
@@ -205,7 +214,7 @@ state active
             return;
         }
     }
-    
+
     dataserver(key kID, string sData)
     {
         if(HasDSRequest(kID)!=-1){
@@ -224,7 +233,7 @@ state active
             }
         }
     }
-    
+
     link_message(integer iSender,integer iNum,string sStr,key kID){
         if(iNum >= CMD_OWNER && iNum <= CMD_WEARER) UserCommand(iNum, sStr, kID);
         else if(iNum == MENUNAME_REQUEST && sStr == g_sParentMenu)
@@ -257,10 +266,13 @@ state active
                     } else if(sMsg == Checkbox(g_iTypeDialog, "NotifDialog")){
                         g_iTypeDialog=1-g_iTypeDialog;
                         llMessageLinked(LINK_SET, LM_SETTING_SAVE, "ownerchecks_typedialog="+(string)g_iTypeDialog,"");
+                    } else if(sMsg == Checkbox(g_iNotifyOwner, "NotifOwner")){
+                        g_iNotifyOwner=1-g_iNotifyOwner;
+                        llMessageLinked(LINK_SET, LM_SETTING_SAVE, "ownerchecks_notifowner="+(string)g_iNotifyOwner, "");
                     }
-                    
+
                     if(iRespring)Menu(kAv,iAuth);
-                        
+
                 } else if(sMenu == "Menu~Interval"){
                     g_iInterval=(integer)sMsg;
                     llSetTimerEvent(g_iEnable);
@@ -277,7 +289,7 @@ state active
             string sToken = llList2String(lSettings,0);
             string sVar = llList2String(lSettings,1);
             string sVal = llList2String(lSettings,2);
-            
+
             if(sToken=="auth"){
                 if(sVar=="owner"){
                     g_lOwners=[];
@@ -299,9 +311,11 @@ state active
                     g_iTypeLocal=(integer)sVal;
                 }else if(sVar == "typedialog"){
                     g_iTypeDialog=(integer)sVal;
+                } else if(sVar == "notifowner"){
+                    g_iNotifyOwner = (integer)sVal;
                 }
-            } 
-            
+            }
+
             if(sStr == "settings=sent")
             {
                 llSetTimerEvent(g_iEnable);

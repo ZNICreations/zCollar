@@ -124,9 +124,8 @@ Particles(key kTarget) {
             PSYS_PART_END_GLOW,0,
             PSYS_PART_BLEND_FUNC_SOURCE,PSYS_PART_BF_SOURCE_ALPHA,
             PSYS_PART_BLEND_FUNC_DEST,PSYS_PART_BF_ONE_MINUS_SOURCE_ALPHA,
-            PSYS_PART_START_SCALE,<0.500000,0.500000,0.000000>,
-            PSYS_PART_END_SCALE,<0.231000,0.231000,0.000000>,
-            PSYS_SRC_TEXTURE,"50f9fb96-f1b5-6357-02b4-5585bc4cc55b",
+            PSYS_PART_START_SCALE,<0.12500000,0.12500000,0.000000>,
+            PSYS_PART_END_SCALE,<0.1131000,0.1131000,0.000000>,
             PSYS_SRC_MAX_AGE,0,
             PSYS_PART_MAX_AGE,2.9,
             PSYS_SRC_BURST_RATE,0.1,
@@ -342,7 +341,7 @@ default
                 g_iTotalItems += (integer)sData;
 
                 if(lTmp==[]){
-                    llWhisper(0, "Installer is ready with "+(string)llGetFreeMemory()+"b");
+                    //llWhisper(0, "Installer is ready with "+(string)llGetFreeMemory()+"b");
                     DeleteDSReq(kID);
                 }
                 else{

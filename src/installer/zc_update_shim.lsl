@@ -175,7 +175,7 @@ default
                 llOwnerSay("Installation is now finishing");
                 //llSay(0, "Installation done signal received!");
                 //llSay(0, "Restoring settings, then removing shim");
-                llResetOtherScript("oc_settings");
+                llResetOtherScript("zni_settings");
                 llResetOtherScript("oc_states");
                 llOwnerSay("Restoring settings...");
                 llSleep(15);
