@@ -173,7 +173,8 @@ default
         //llMessageLinked(LINK_SET, LM_SETTING_REQUEST, "ALL", "");
         llSetTimerEvent(10);
 
-
+        llSleep(3);
+        llMessageLinked(LINK_SET, -57,"","");
         //llMessageLinked(LINK_SET, UPDATER, "update_active", "");
         g_iRelayActive = llGetStartParameter();
         if(!g_iRelayActive)

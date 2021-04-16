@@ -372,7 +372,7 @@ default
                         g_iBundleNumber=0;
                         lBundle=GetBundle();
                     }
-
+                    llGiveInventory(g_kUpdateTarget, bundle_name);
                     if(lBundle==[])
                     {
 
@@ -509,6 +509,9 @@ default
                 if(!g_iLegacyUpdate){
                     g_kCollar = i;
                     g_iUpdatePin = (integer)llList2String(lParam,1);
+                    // Also send the oc_dialog since the shim makes use of the dialog script for the package selection process
+                    llRemoteLoadScriptPin(i, "oc_dialog", g_iUpdatePin,TRUE,0);
+
                     llRemoteLoadScriptPin(i, "zc_update_shim", g_iUpdatePin, TRUE, 0); // 0 = from installer itself, 1 = from relay orb.
 
 
@@ -548,7 +551,10 @@ default
             {
                 //llSay(0, "Relay is ready to enter stage 2");
                 //llSay(0, "Sending shim to relay");
+                llGiveInventory(g_kRelay, "oc_dialog");
                 llGiveInventory(g_kRelay, "zc_update_shim");
+
+                llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Send|INSTALL|oc_dialog");
                 llRegionSayTo(g_kRelay, g_iUpdateChan+1, "ShimSent|"+(string)g_kRelayTarget+"|"+UPDATE_VERSION);
                 // We do not yet have the collar's update pin. The relay will obtain this information so it can install the shim and get things moving!
             } else if(llList2String(lParam,0) == "pkg_get" && g_iUpdateRunning)
