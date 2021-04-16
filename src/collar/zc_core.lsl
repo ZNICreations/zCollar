@@ -63,6 +63,7 @@ integer LM_SETTING_SAVE = 2000;//scripts send messages on this channel to have s
 integer LM_SETTING_RESPONSE = 2002;//the settings script sends responses on this channel
 integer LM_SETTING_DELETE = 2003;//delete token from settings
 integer LM_SETTING_EMPTY = 2004;//sent when a token has no value
+integer LM_SETTING_RESET = 2006; // Sent to request a full settings reset. Consent prompt handled by zni_settings
 
 integer MENUNAME_REQUEST = 3000;
 integer MENUNAME_RESPONSE = 3001;
@@ -108,7 +109,7 @@ Settings(key kID, integer iAuth){
     list lButtons = ["Print", "Load", "Fix Menus"];
     if (llGetInventoryType("oc_resizer") == INVENTORY_SCRIPT) lButtons += ["Resize"];
     else lButtons += ["-"];
-    lButtons += [Checkbox(g_iHide, "Hide"), "EDITOR", Checkbox(g_iAllowHide, "AllowHiding"), "Addon.."];
+    lButtons += [Checkbox(g_iHide, "Hide"), "EDITOR", Checkbox(g_iAllowHide, "AllowHiding"), "Addon..", "RESET"];
     Dialog(kID, sPrompt, lButtons, [UPMENU],0,iAuth, "Menu~Settings");
 }
 
@@ -627,6 +628,9 @@ state active
                     } else if(sMsg == "Addon.."){
                         iRespring=FALSE;
                         AddonSettings(kAv,iAuth);
+                    } else if(sMsg == "RESET")
+                    {
+                        llMessageLinked(LINK_SET, LM_SETTING_RESET, (string)iAuth, kAv);
                     }
 
                     if(iRespring)Settings(kAv,iAuth);

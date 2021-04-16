@@ -96,6 +96,7 @@ integer CMD_EVERYONE = 504;
 //integer CMD_RELAY_SAFEWORD = 511;
 
 integer NOTIFY = 1002;
+integer NOTIFY_OWNERS = 1003;
 integer REBOOT = -1000;
 
 integer LM_SETTING_SAVE = 2000;//scripts send messages on this channel to have settings saved
@@ -104,6 +105,7 @@ integer LM_SETTING_REQUEST = 2001;//when startup, scripts send requests for sett
 integer LM_SETTING_RESPONSE = 2002;//the settings script sends responses on this channel
 integer LM_SETTING_DELETE = 2003;//delete token from settings
 integer LM_SETTING_EMPTY = 2004;//sent when a token has no value
+integer LM_SETTING_RESET = 2006;
 
 //integer MENUNAME_REQUEST = 3000;
 //integer MENUNAME_RESPONSE = 3001;
@@ -544,6 +546,13 @@ default
                         }
                         llMessageLinked(LINK_SET, LM_SETTING_RESPONSE, "settings=sent", "");
                     }else Send("type=ALL&minimum=0&maximum=10", "all:0:"+GetDSMeta(kID));
+                } else if(sType == "RESET")
+                {
+                    llMessageLinked(LINK_SET, NOTIFY, "0Database erased", llGetOwner());
+                    llMessageLinked(LINK_SET, NOTIFY_OWNERS, "All collar settings on %WEARERNAME%'s collar have been reset to factory defaults.", "");
+                    llMessageLinked(LINK_SET, REBOOT, "", "");
+                    llMessageLinked(LINK_SET, REBOOT, "reboot --f", "");
+                    llResetScript();
                 }
             }
             // we dont need to update the request here
@@ -615,6 +624,12 @@ default
                 return;
             }
             Send("type=DELETE&token="+llToLower(llList2String(lPar,0))+"&var="+llToLower(llList2String(lPar,1)), "delete");
+        } else if(iNum == LM_SETTING_RESET)
+        {
+            if(((integer)sMsg)==CMD_OWNER)
+            {
+                Dialog(kID, "[Database Controller]\n\nAre you sure you want to completely reset the collar memory? This action cannot be undone", ["Yes", "No"],[],0,(integer)sMsg, "resetconsent");
+            }else llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to resetting the collar memory", kID);
         } else if(iNum >= CMD_OWNER && iNum <= CMD_EVERYONE) UserCommand(iNum, sMsg, kID);
         else if(iNum == LM_SETTING_RESPONSE)
         {
@@ -657,6 +672,15 @@ default
                         llMessageLinked(LINK_SET, NOTIFY, "1Consented. Reloading URL", g_kLoadURLBy);
                         g_iLoadURLConsented=TRUE;
                         g_kLoadURL = llHTTPRequest(g_sLoadURL, [], "");
+                    }
+                } else if(sMenu == "resetconsent")
+                {
+                    if(sMsg == "No")
+                    {
+                        llMessageLinked(LINK_SET,NOTIFY,"0Reset operation has been cancelled.", kAv);
+                    }else{
+                        llMessageLinked(LINK_SET, NOTIFY, "1Waiting for database...", kAv);
+                        Send("type=RESET", "");
                     }
                 }
 
