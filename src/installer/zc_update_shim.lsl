@@ -177,6 +177,20 @@ default
         llMessageLinked(LINK_SET, -57,"","");
         //llMessageLinked(LINK_SET, UPDATER, "update_active", "");
         g_iRelayActive = llGetStartParameter();
+
+        integer i=0;
+        integer end = llGetInventoryNumber(INVENTORY_NOTECARD);
+        for(i=0;i<end;i++)
+        {
+            string name = llGetInventoryName(INVENTORY_NOTECARD,i);
+            if(llSubStringIndex(name,"BUNDLE_")!=-1)
+            {
+                llRemoveInventory(name); // Remove the bundles from the collar to prevent duplicates
+                i=-1;
+                end=llGetInventoryNumber(INVENTORY_NOTECARD);
+            }
+        }
+
         if(!g_iRelayActive)
             llSay(UPDATER_CHANNEL, "pkg_get|"+(string)SECURE);
         else

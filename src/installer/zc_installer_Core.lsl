@@ -372,7 +372,8 @@ default
                         g_iBundleNumber=0;
                         lBundle=GetBundle();
                     }
-                    llGiveInventory(g_kUpdateTarget, bundle_name);
+                    if(sBundleType!="DEPRECATED")
+                        llGiveInventory(g_kUpdateTarget, bundle_name);
                     if(lBundle==[])
                     {
 

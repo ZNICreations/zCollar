@@ -766,6 +766,8 @@ state active
 
             if(sStr == "settings=sent"){
                 if(g_kGroup==(string)NULL_KEY)g_kGroup="";
+
+                if(!g_iLocked)llOwnerSay("@detach=y");
             }
         } else if(iNum == LM_SETTING_DELETE){
             list lPar = llParseString2List(sStr, ["_"],[]);

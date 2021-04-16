@@ -381,6 +381,8 @@ integer g_iStartup=TRUE;
 
 string g_sStack;
 
+integer STARTUP=-57;
+
 integer g_iVerbosity = 1;
 integer CheckModifyPerm(string sSetting, key kStr)
 {
@@ -400,7 +402,7 @@ default
     {
         if(llGetLinkNumber()==LINK_ROOT || llGetLinkNumber()==0){}else{
             // I didn't feel like doing a bunch of complex logic there, so we're just doing an else case. If we are not in the root prim, delete ourself
-            llOwnerSay("Moving oc_settings");
+            llOwnerSay("Moving zni_settings");
             llRemoveInventory(llGetScriptName());
         }
         g_kWearer = llGetOwner();
@@ -424,8 +426,6 @@ default
                     g_kSettingsCard = llGetInventoryKey(g_sSettings);
                 }
             }
-        } else if(iChange & CHANGED_OWNER){
-            llResetScript();
         }
     }
 
@@ -453,8 +453,6 @@ default
                     // utilize the save function inside the LMs
                     //llMessageLinked(LINK_SET, LM_SETTING_SAVE, sData, "origin");
                     ProcessSettingLine(sData);
-
-                    UpdateDSRequest(kID, llGetNotecardLine(g_sSettings, iLine), "read_settings:"+(string)iLine);
                 }
             }
         }
@@ -506,7 +504,7 @@ default
                             else
                             {
                                 if(llList2String(llDat,0)=="intern" && llList2String(lMode,0)=="print"){}else{
-                                    g_sStack += llList2String(llDat,0)+"_"+llList2String(llDat,1)+"~"+llList2String(llDat,2)+"\n";
+                                    g_sStack += llList2String(llDat,0)+"_"+llList2String(llDat,1)+"="+llList2String(llDat,2)+"\n";
                                 }
 
                                 if(llStringLength(g_sStack)>=900){
@@ -598,6 +596,9 @@ default
 
 
             Send("type=PUT&token="+llToLower(llList2String(lPar,0))+"&var="+llToLower(llList2String(lPar,1))+"&val="+llList2String(lPar,2), "set");
+        } else if(iNum == STARTUP)
+        {
+            g_iStartup=TRUE;
         } else if(iNum == LM_SETTING_REQUEST)
         {
             list lPar = llParseString2List(sMsg, ["_"],[]);
