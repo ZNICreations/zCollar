@@ -15,6 +15,12 @@ https://github.com/zontreck/zCollar
 */
 
 
+integer DIALOG = -9000;
+integer DIALOG_RESPONSE = -9001;
+integer DIALOG_TIMEOUT = -9002;
+string UPMENU = "BACK";
+
+
 integer LM_SETTING_SAVE = 2000;//scripts send messages on this channel to have settings saved
 //str must be in form of "token=value"
 integer LM_SETTING_REQUEST = 2001;//when startup, scripts send requests for settings on this channel
@@ -28,6 +34,15 @@ string GetSetting(string sToken) {
     return llList2String(g_lSettings, i + 1);
 }
 
+Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName) {
+    key kMenuID = llGenerateKey();
+
+    llMessageLinked(LINK_SET, DIALOG, (string)kID + "|" + sPrompt + "|" + (string)iPage + "|" + llDumpList2String(lChoices, "`") + "|" + llDumpList2String(lUtilityButtons, "`") + "|" + (string)iAuth, kMenuID);
+
+    integer iIndex = llListFindList(g_lMenuIDs, [kID]);
+    if (~iIndex) g_lMenuIDs = llListReplaceList(g_lMenuIDs, [kID, kMenuID, sName], iIndex, iIndex + g_iMenuStride - 1);
+    else g_lMenuIDs += [kID, kMenuID, sName];
+}
 DelSetting(string sToken) { // we'll only ever delete user settings
     sToken = llToLower(sToken);
     integer i = llGetListLength(g_lSettings) - 1;
@@ -107,6 +122,47 @@ CheckLinkedScripts()
         llMessageLinked(LINK_ALL_OTHERS, LOADPIN, llList2String(g_lLinkedScripts,i), "");
     }
 }
+
+
+string InstallerBox(integer iMode, string sLabel)
+{
+    string sBox;
+    if(iMode==1)sBox = "▣";
+    else if(iMode==0)sBox = "□";
+    else if(iMode == 2)sBox = "∅";
+    else if(iMode == 3)sBox = "⊕";
+
+    return sBox+" "+sLabel;
+}
+list g_lPkgs;
+list g_lMenuIDs;
+integer g_iMenuStride;
+
+Prompt(key kAv)
+{
+    list lButtons = [];
+    integer i=0;
+    integer end = llGetListLength(g_lPkgs);
+    for(i=0;i<end;i+=3)
+    {
+        lButtons += InstallerBox((integer)llList2String(g_lPkgs,i+2), llList2String(g_lPkgs,i+1));
+    }
+
+    Dialog(kAv, "What packages would you like to install, or remove?\n\n* Note: Required and deprecated packages cannot be scheduled for uninstallation. If you wish to fully uninstall zCollar, please see the PackageManager in help/about.", lButtons, ["CONFIRM"], 0, 500, "prompt~pkgs");
+}
+
+integer IndexOfBundle(string InstallBox)
+{
+    integer i=0;
+    integer end = llGetListLength(g_lPkgs);
+    for(i=0;i<end;i+=3)
+    {
+        string Inst = InstallerBox((integer)llList2String(g_lPkgs,i+2), llList2String(g_lPkgs,i+1));
+        if(Inst==InstallBox)return i;
+    }
+
+    return -1;
+}
 default
 {
     state_entry()
@@ -114,22 +170,29 @@ default
         SECURE = llRound(llFrand(8383288));
         llListen(SECURE, "", "", "");
         //llWhisper(0, "Update Shim is now active. Requesting all settings");
-        llMessageLinked(LINK_SET, LM_SETTING_REQUEST, "ALL", "");
+        //llMessageLinked(LINK_SET, LM_SETTING_REQUEST, "ALL", "");
         llSetTimerEvent(10);
-        llMessageLinked(LINK_SET, UPDATER, "update_active", "");
+
+
+        //llMessageLinked(LINK_SET, UPDATER, "update_active", "");
         g_iRelayActive = llGetStartParameter();
+        if(!g_iRelayActive)
+            llSay(UPDATER_CHANNEL, "pkg_get|"+(string)SECURE);
+        else
+            llSay(RELAY_CHANNEL, "pkg_get|"+(string)SECURE);
     }
     timer()
     {
         if(llGetTime()>=10 && g_iPass!=3 && !g_iReady){
-            g_iPass++;
-            llOwnerSay("Settings not yet ready. Requesting again (attempt "+(string)g_iPass+")");
+            //g_iPass++;
+            llOwnerSay("Please be sure you configure the package preferences.");
             llResetTime();
-            llMessageLinked(LINK_SET, LM_SETTING_REQUEST, "ALL", "");
+            //llMessageLinked(LINK_SET, LM_SETTING_REQUEST, "ALL", "");
         } else if(llGetTime()>=10 && g_iPass>=3 && !g_iReady)
         {
             llSetTimerEvent(0);
             g_iReady=TRUE;
+            llMessageLinked(LINK_SET, UPDATER, "update_active", "");
             if(!g_iRelayActive)
                 llSay(UPDATER_CHANNEL, "reallyready|"+(string)SECURE);
             else
@@ -138,31 +201,58 @@ default
     }
     link_message(integer iSender, integer iNum, string sStr, key kID)
     {
-        if(iNum == LM_SETTING_RESPONSE)
-        {
-            if(sStr!="settings=sent"){
-                list lTmp = llParseString2List(sStr, ["="],[]);
-                if(g_iRelayActive){
-                    if(llToLower(llList2String(lTmp,0))=="leash_leashedto")return;
-                    if(llToLower(llList2String(lTmp,0))=="leash_leashedtoname")return;
-                }
-                SetSetting(llList2String(lTmp,0), llList2String(lTmp,1));
-                llResetTime();
-            }else{
-                // settings recieved!
-                g_iReady=TRUE;
-                if(!g_iRelayActive)
-                    llSay(UPDATER_CHANNEL, "reallyready|"+(string)SECURE);
-                else
-                    llSay(RELAY_CHANNEL, "reallyready|"+(string)SECURE);
-                //llSay(0, "Settings finished downloading... update shim ready, leaving update state, not yet implemented");
-                //llMessageLinked(LINK_SET, REBOOT, "", "");
-                //llRemoveInventory(llGetScriptName());
-            }
-        } else if(iNum == LOADPIN)
+        if(iNum == LOADPIN)
         {
             list lTmp = llParseString2List(sStr, ["@"],[]);
             llRemoteLoadScriptPin(kID, "zc_linkprim_hammer", (integer)llList2String(lTmp,0), TRUE, 825);
+        }else if (iNum == DIALOG_TIMEOUT) {
+            integer iMenuIndex = llListFindList(g_lMenuIDs, [kID]);
+            g_lMenuIDs = llDeleteSubList(g_lMenuIDs, iMenuIndex - 1, iMenuIndex +3);  //remove stride from g_lMenuIDs
+        }
+        else if(iNum == DIALOG_RESPONSE){
+
+            list lMenuParams = llParseString2List(sStr, ["|"],[]);
+            integer iAuth = llList2Integer(lMenuParams,3);
+
+
+            integer iMenuIndex = llListFindList(g_lMenuIDs, [kID]);
+            if(iMenuIndex!=-1){
+                string sMenu = llList2String(g_lMenuIDs, iMenuIndex+1);
+                g_lMenuIDs = llDeleteSubList(g_lMenuIDs, iMenuIndex-1, iMenuIndex-2+g_iMenuStride);
+                //list lMenuParams = llParseString2List(sStr, ["|"],[]);
+                key kAv = llList2Key(lMenuParams,0);
+                string sMsg = llList2String(lMenuParams,1);
+                //integer iAuth = llList2Integer(lMenuParams,3);
+
+                integer iRespring=TRUE;
+
+                //llSay(0, sMenu);
+                if(sMenu == "prompt~pkgs"){
+                    integer indexOfBundles = IndexOfBundle(sMsg);
+                    if(indexOfBundles != -1)
+                    {
+                        integer iPackageMode = (integer)llList2String(g_lPkgs,indexOfBundles+2);
+                        if(iPackageMode>1){
+                            llMessageLinked(LINK_SET,1002, "0REQUIRED or DEPRECATED bundles MAY NOT be changed for installation. To uninstall zCollar, please see the Help/About menu for the PackageManager", kAv);
+                        }else{
+                            iPackageMode=1-iPackageMode;
+                            g_lPkgs = llListReplaceList(g_lPkgs, [iPackageMode], indexOfBundles+2,indexOfBundles+2);
+                        }
+                    } else{
+                        if(sMsg == "CONFIRM")
+                        {
+                            iRespring=FALSE;
+                            llMessageLinked(LINK_SET,1002, "0Please Stand By... Confirming selection!", kAv);
+                            // DO MAGIC TO SEND THE PACKAGE LIST, THEN START UPDATE
+
+                            llSay(UPDATER_CHANNEL, "pkg_set|"+llDumpList2String(g_lPkgs,"~"));
+                            llResetTime();
+                            g_iPass=3;
+                        }
+                    }
+                    if(iRespring)Prompt(kAv);
+                }
+            }
         }
     }
     listen(integer c,string n,key i,string m)
@@ -177,21 +267,17 @@ default
                 //llSay(0, "Restoring settings, then removing shim");
                 llResetOtherScript("zni_settings");
                 llResetOtherScript("oc_states");
-                llOwnerSay("Restoring settings...");
                 llSleep(15);
                 llMessageLinked(LINK_SET,REBOOT,"","");
-                llSleep(10);
-
-                integer ix=0;
-                integer end = llGetListLength(g_lSettings);
-                for(ix=0;ix<end;ix+=2)
-                {
-                    llMessageLinked(LINK_SET, LM_SETTING_SAVE, llList2String(g_lSettings,ix)+"="+llList2String(g_lSettings,ix+1), "origin");
-                }
                 llSetRemoteScriptAccessPin(0);
 
                 llOwnerSay("Installation Completed!");
                 llRemoveInventory(llGetScriptName());
+            } else if(llList2String(lCmd,0)=="pkg_reply")
+            {
+                g_lPkgs = llParseString2List(llList2String(lCmd,1), ["~"],[]);
+
+                Prompt(llGetOwner());
             } else {
                 //llSay(0, "Unimplemented updater command: "+m);
                 list lOpts = llParseString2List(m,["|"],[]);

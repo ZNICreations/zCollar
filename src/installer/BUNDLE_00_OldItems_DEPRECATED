@@ -23,3 +23,5 @@ SCRIPT|oc_folders
 SCRIPT|oc_leash
 SCRIPT|oc_settings
 SCRIPT|oc_OwnerOnlineCheck
+SCRIPT|oc_themes
+SCRIPT|zc_addons

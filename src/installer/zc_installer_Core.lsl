@@ -5,7 +5,9 @@ Copyright 2021
 : Contributors :
 
 Aria (Tashia Redrose)
-    * March 2021         - Created zc_installer_Core
+    * April 2021            - Rebranded as zc_installer_Core
+            * OpenCollar declined this contribution in its original form. This script may not ever be merged into the OpenCollar codebase.
+    * March 2021         - Created oc_installer_Core
 
 et al.
 
@@ -124,8 +126,8 @@ Particles(key kTarget) {
             PSYS_PART_END_GLOW,0,
             PSYS_PART_BLEND_FUNC_SOURCE,PSYS_PART_BF_SOURCE_ALPHA,
             PSYS_PART_BLEND_FUNC_DEST,PSYS_PART_BF_ONE_MINUS_SOURCE_ALPHA,
-            PSYS_PART_START_SCALE,<0.12500000,0.12500000,0.000000>,
-            PSYS_PART_END_SCALE,<0.1131000,0.1131000,0.000000>,
+            PSYS_PART_START_SCALE,<0.1500000,0.1500000,0.000000>,
+            PSYS_PART_END_SCALE,<0.1000,0.1000,0.000000>,
             PSYS_SRC_MAX_AGE,0,
             PSYS_PART_MAX_AGE,2.9,
             PSYS_SRC_BURST_RATE,0.1,
@@ -229,6 +231,78 @@ key g_kCollar;
 integer g_iLegacyUpdate = FALSE;
 
 integer g_iProcessedDeprecation = FALSE;
+
+list g_lBundleStatuses;
+ScanAllBundles()
+{
+    list lBundle = GetBundleInformation();
+    while(lBundle != [])
+    {
+        g_iBundleNumber++;
+
+        list lParts = llParseStringKeepNulls(llList2String(lBundle,0), ["_"],[]);
+        integer iBundleMode = 0;
+        string sBundle = llList2String(lParts,2);
+        if(llList2String(lParts,3) == "DEPRECATED"){
+            iBundleMode = 2;
+        } else if(llList2String(lParts,3) == "REMOVE")
+        {
+            iBundleMode = 0;
+        } else if(llList2String(lParts,3) == "REQUIRED")
+        {
+            iBundleMode = 3;
+        } else if(llList2String(lParts,3) == "INSTALL")
+        {
+            iBundleMode=1;
+        }
+
+        g_lBundleStatuses += [llList2String(lBundle,0), sBundle, iBundleMode];
+
+        lBundle=GetBundleInformation();
+    }
+}
+
+string InstallerBox(integer iMode, string sLabel)
+{
+    string sBox;
+    if(iMode==1)sBox = "▣";
+    else if(iMode==0)sBox = "□";
+    else if(iMode == 2)sBox = "∅";
+    else if(iMode == 3)sBox = "⊕";
+
+    return sBox+" "+sLabel;
+}
+
+list GetBundle()
+{
+    // This method returns the same format as GetBundleInformation but goes off a different data source, and dynamically constructs the parameters.
+    // INSTALL will be translated to REQUIRED
+    // REMOVE will be translated to DEPRECATED
+    // REQUIRED will be left as is
+    integer iPass=0;
+    integer i=0;
+    integer end = llGetListLength(g_lBundleStatuses);
+    for(i=0;i<end;i+=3)
+    {
+        if(g_iBundleNumber==iPass)
+        {
+            // Handle
+            string sMode = "UNKNOWN";
+            integer iMode = (integer)llList2String(g_lBundleStatuses,i+2);
+
+            if(iMode==0)sMode="DEPRECATED";
+            else if(iMode==1)sMode="REQUIRED";
+            else if(iMode==2)sMode="DEPRECATED";
+            else if(iMode==3)sMode="REQUIRED";
+
+
+            return [llList2String(g_lBundleStatuses,i), sMode];
+        }
+        iPass++;
+    }
+
+    return [];
+}
 default
 {
     state_entry()
@@ -245,9 +319,10 @@ default
         llParticleSystem([]);
         //llWhisper(0, "Calculating the number of assets contained in bundles...");
 
+        ScanAllBundles();
         g_iBundleNumber=0;
-        list lTmp = GetBundleInformation();
-        UpdateDSRequest(NULL, llGetNumberOfNotecardLines(llList2String(lTmp,0)), "total_assets_count");
+        //list lTmp = GetBundleInformation();
+        UpdateDSRequest(NULL, llGetNumberOfNotecardLines(llList2String(g_lBundleStatuses,0)), "total_assets_count");
         llSetLinkPrimitiveParams(2,[PRIM_TEXT,"",ZERO_VECTOR,0]);
     }
 
@@ -292,10 +367,10 @@ default
                     if(g_iBundleNumber==0 && !g_iProcessedDeprecation)g_iProcessedDeprecation=1;
 
                     g_iBundleNumber++;
-                    list lBundle = GetBundleInformation();
+                    list lBundle = GetBundle();
                     if(lBundle==[] && g_iProcessedDeprecation && g_iBundleNumber!=1000){
                         g_iBundleNumber=0;
-                        lBundle=GetBundleInformation();
+                        lBundle=GetBundle();
                     }
 
                     if(lBundle==[])
@@ -337,7 +412,7 @@ default
             } else if(llList2String(lMeta,0)=="total_assets_count"){
                 if(g_iBundleNumber==0)g_iTotalItems+=(integer)sData; // Bundle 0 gets processed twice, at the beginning, then at the end!
                 g_iBundleNumber++;
-                list lTmp = GetBundleInformation();
+                list lTmp = GetBundle();
                 g_iTotalItems += (integer)sData;
 
                 if(lTmp==[]){
@@ -386,7 +461,7 @@ default
                 llRegionSayTo(i,c,"get ready");
                 g_iTotalItems = 0;
                 g_iBundleNumber=999;
-                UpdateDSRequest(NULL, llGetNumberOfNotecardLines("LEGACY_00-Core_REQUIRED"), "total_assets_count");
+                UpdateDSRequest(NULL, llGetNumberOfNotecardLines("LEGACY_00_Core_REQUIRED"), "total_assets_count");
                 return;
             }
             if(llList2String(lParam,0)=="UPDATE")
@@ -399,7 +474,7 @@ default
                     llRegionSayTo(i,c,"get ready");
                     g_iTotalItems=0;
                     g_iBundleNumber=999;
-                    UpdateDSRequest(NULL, llGetNumberOfNotecardLines("LEGACY_00-Core_REQUIRED"), "total_assets_count");
+                    UpdateDSRequest(NULL, llGetNumberOfNotecardLines("LEGACY_00_Core_REQUIRED"), "total_assets_count");
                     return;
                 }
                 if(Ver<MinorNew || llGetOwnerKey(i) == llGetOwner())
@@ -423,9 +498,9 @@ default
                         g_kRelayTarget = i;
                         //llSay(0, "Using New Update style");
                         //llSay(0, "Send: [oc_installer_relay]");
-                        //llGiveInventory(i, "oc_installer_relay");  // <-- Uncomment to enable
+                        llGiveInventory(i, "oc_installer_relay");  // <-- Uncomment to enable
 
-                        //llRegionSayTo(i,c,"UPDATER RELAY"); // <-- Uncomment to enable
+                        llRegionSayTo(i,c,"UPDATER RELAY"); // <-- Uncomment to enable
                     }
                 }
             } else if(llList2String(lParam,0) == "ready")
@@ -435,12 +510,22 @@ default
                     g_kCollar = i;
                     g_iUpdatePin = (integer)llList2String(lParam,1);
                     llRemoteLoadScriptPin(i, "zc_update_shim", g_iUpdatePin, TRUE, 0); // 0 = from installer itself, 1 = from relay orb.
+
+
+                    /*
+
+                    * Here we initiate the package selection prompt!
+                    * After packages are confirmed, send the update shim
+                    * TODO: Change the first step in the update process to initiate a dialog prompt for the menu user that requested the update, and use the collar's dialog system for package selection.
+                    * At the first step, the installation is NOT yet begun, this gives us a major window to allow for cancelling the update as well.
+
+                    */
                 }else{
                     // Do bundle!
                     g_iBundleNumber=999;
                     g_kCollar=i;
                     g_iUpdatePin = (integer)llList2String(lParam,1);
-                    UpdateDSRequest(NULL, llGetNotecardLine("LEGACY_00-Core_REQUIRED",0), "read_bundle|LEGACY_00-Core_REQUIRED|0|REQUIRED");
+                    UpdateDSRequest(NULL, llGetNotecardLine("LEGACY_00_Core_REQUIRED",0), "read_bundle|LEGACY_00_Core_REQUIRED|0|REQUIRED");
                 }
             } else if(llList2String(lParam,0)=="reallyready" && g_iUpdateRunning)
             {
@@ -452,7 +537,7 @@ default
                 Particles(g_kUpdateTarget);
                 //llSay(0, "Begin reading Bundles");
                 g_iBundleNumber=0;
-                list lBundleInf = GetBundleInformation();
+                list lBundleInf = GetBundle();
                 UpdateDSRequest(NULL, llGetNotecardLine(llList2String(lBundleInf,0),0), "read_bundle|"+llList2String(lBundleInf,0)+"|0|"+llList2String(lBundleInf,1)); // read_bundle|bundle_name|line_number|bundle_type
             } else if(llList2String(lParam,0) == "AnnounceRelay" && g_iUpdateRunning)
             {
@@ -466,6 +551,14 @@ default
                 llGiveInventory(g_kRelay, "zc_update_shim");
                 llRegionSayTo(g_kRelay, g_iUpdateChan+1, "ShimSent|"+(string)g_kRelayTarget+"|"+UPDATE_VERSION);
                 // We do not yet have the collar's update pin. The relay will obtain this information so it can install the shim and get things moving!
+            } else if(llList2String(lParam,0) == "pkg_get" && g_iUpdateRunning)
+            {
+                // Send the serialized package list for user selection
+                llRegionSayTo(i, (integer)llList2String(lParam,1), "pkg_reply|"+llDumpList2String(g_lBundleStatuses,"~"));
+            } else if(llList2String(lParam,0)=="pkg_set" && g_iUpdateRunning)
+            {
+                g_lBundleStatuses = llParseString2List(llList2String(lParam,1), ["~"],[]);
+
             }
         }else if(c==SECURE_CHANNEL)
         {
@@ -526,6 +619,7 @@ default
                 g_sPrompt_tmpName = llList2String(lOpt,1);
                 llSetTimerEvent(1);
                 return; // intentionally exit here
+
             } else {
                 //llSay(0, "Unimplemented command: "+llList2String(lOpt,0)+"; "+llList2String(lOpt,1));
             }

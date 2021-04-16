@@ -424,6 +424,8 @@ default
                     g_kSettingsCard = llGetInventoryKey(g_sSettings);
                 }
             }
+        } else if(iChange & CHANGED_OWNER){
+            llResetScript();
         }
     }
 
@@ -451,6 +453,8 @@ default
                     // utilize the save function inside the LMs
                     //llMessageLinked(LINK_SET, LM_SETTING_SAVE, sData, "origin");
                     ProcessSettingLine(sData);
+
+                    UpdateDSRequest(kID, llGetNotecardLine(g_sSettings, iLine), "read_settings:"+(string)iLine);
                 }
             }
         }
@@ -502,7 +506,7 @@ default
                             else
                             {
                                 if(llList2String(llDat,0)=="intern" && llList2String(lMode,0)=="print"){}else{
-                                    g_sStack += llList2String(llDat,0)+"_"+llList2String(llDat,1)+"="+llList2String(llDat,2)+"\n";
+                                    g_sStack += llList2String(llDat,0)+"_"+llList2String(llDat,1)+"~"+llList2String(llDat,2)+"\n";
                                 }
 
                                 if(llStringLength(g_sStack)>=900){
