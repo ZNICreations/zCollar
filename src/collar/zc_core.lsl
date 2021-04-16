@@ -165,13 +165,14 @@ AccessMenu(key kID, integer iAuth){
     Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Menu~Auth");
 }
 
+list g_lHelpAbout = ["Update", "Support", "License"];
 HelpMenu(key kID, integer iAuth){
     string EXTRA_VER_TXT = setor(bool((llGetSubString(COLLAR_VERSION,-1,-1)=="0")), "", " (ALPHA "+llGetSubString(COLLAR_VERSION,-1,-1)+") ");
     EXTRA_VER_TXT += setor(bool((llGetSubString(COLLAR_VERSION,-2,-2)=="0")), "", " (BETA "+llGetSubString(COLLAR_VERSION,-2,-2)+") ");
     EXTRA_VER_TXT += setor(bool((llGetSubString(COLLAR_VERSION,-3,-3) == "0")), "", " (RC "+llGetSubString(COLLAR_VERSION,-3,-3)+") ");
 
     string sPrompt = "\nzCollar "+COLLAR_VERSION+" "+EXTRA_VER_TXT+"\nVersion: "+setor(g_iAmNewer, "(Newer than release)", "")+" "+setor(UPDATE_AVAILABLE, "(Update Available)", "(Most Current Version)");
-    sPrompt += "\n\nDocumentation https://opencollar.cc";
+    sPrompt += "\n\nDocumentation https://zontreck.dev";
     sPrompt += "\nPrefix: "+g_sPrefix+"\nChannel: "+(string)g_iChannel;
 
     if(g_iNotifyInfo){
@@ -179,7 +180,7 @@ HelpMenu(key kID, integer iAuth){
         llMessageLinked(LINK_SET, NOTIFY, sPrompt, kID);
         return;
     }
-    list lButtons = ["Update", "Support", "License"];
+    list lButtons = g_lHelpAbout;
     Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Menu~Help");
 }
 
@@ -476,6 +477,9 @@ state active
                 }
             } else if(sName == "Apps"){
                 if(llListFindList(g_lApps,[sMenu])==-1)g_lApps= [sMenu]+g_lApps;
+            } else if(sName == "Help/About")
+            {
+                if(llListFindList(g_lHelpAbout,[sMenu])==-1)g_lHelpAbout=[sMenu]+g_lHelpAbout;
             }
         } else if(iNum == MENUNAME_REMOVE){
             // This is not really used much if at all in 7.x
@@ -491,6 +495,10 @@ state active
             } else if(sName == "Apps"){
                 integer loc = llListFindList(g_lApps,[sMenu]);
                 if(loc!=-1)g_lApps = llDeleteSubList(g_lApps, loc,loc);
+            } else if(sName == "Help/About")
+            {
+                integer loc = llListFindList(g_lHelpAbout, [sMenu]);
+                if(loc!=-1)g_lHelpAbout = llDeleteSubList(g_lHelpAbout,loc,loc);
             }
 
         }
@@ -672,6 +680,9 @@ state active
                         llMessageLinked(LINK_SET, NOTIFY, "0You can get support for zCollar in the following group: secondlife:///app/group/e40d4a13-6921-780f-15a8-46daa49b51c2/about", kAv);
                     } else if(sMsg == "Update"){
                         UserCommand(iAuth, "update", kAv);
+                    } else {
+                        llMessageLinked(LINK_SET, iAuth, sMsg, kAv);
+                        iRespring=FALSE;
                     }
 
                     if(iRespring)HelpMenu(kAv,iAuth);
@@ -834,6 +845,7 @@ state active
             if(sStr=="initialize"){
                 llMessageLinked(LINK_SET, MENUNAME_REQUEST, g_sSubMenu, "");
                 llMessageLinked(LINK_SET, MENUNAME_REQUEST, "Apps", "");
+                llMessageLinked(LINK_SET, MENUNAME_REQUEST, "Help/About", "");
 
                 DoCheckUpdate();
 
