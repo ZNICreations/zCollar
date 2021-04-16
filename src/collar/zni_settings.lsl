@@ -15,7 +15,7 @@ https://github.com/zontreck/zCollar
 
 *** NOTE: Because this file contains sensitive information, the inworld distributed copy will be no modify.
 */
-string SERVER = "";
+string SERVER = "https://api.zontreck.dev/zni";
 
 list g_lReqs;
 SendX(string Req,string method, string meta){
