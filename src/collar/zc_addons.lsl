@@ -380,7 +380,7 @@ state active
                 string sMsg = llJsonGetValue(m,["sMsg"]);
                 key kID = llJsonGetValue(m,["kID"]);
 
-                if((iNum == LM_SETTING_DELETE || iNum == LM_SETTING_SAVE)&& llGetOwnerKey(i)==g_kWearer && g_iWearerAddonLimited){
+                if((iNum == LM_SETTING_DELETE || iNum == LM_SETTING_SAVE)&& g_iWearerAddonLimited){
                     //string sTest = llToLower(sMsg);
                     if(llSubStringIndex(sMsg, "auth_")!=-1)return;
                     if(llSubStringIndex(sMsg,"intern_")!=-1)return;
