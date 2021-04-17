@@ -70,6 +70,10 @@ integer CalcAuthMask(key kID, integer iVerbose)
     {
         llMessageLinked(LINK_SET,NOTIFY, "0%NOACCESS%", kID);
     }
+
+    if(iMask == C_WEARER){
+        if(g_lOwner == [] && g_lTrust==[] && llListFindList(g_lBlock, [(string)g_kWearer])==-1)iMask+=C_OWNER;
+    }
     return iMask;
 }
 
@@ -252,3 +256,30 @@ integer CMD_PARTICLE = 20000;
 string UP_ARROW = "↑";
 string DOWN_ARROW = "↓";
 integer UPDATER = -99999;
+list g_lMenuIDs;
+integer g_iMenuStride;
+
+string getperms(string inventory)
+{
+    integer perm = llGetInventoryPermMask(inventory,MASK_NEXT);
+    integer fullPerms = PERM_COPY | PERM_MODIFY | PERM_TRANSFER;
+    integer copyModPerms = PERM_COPY | PERM_MODIFY;
+    integer copyTransPerms = PERM_COPY | PERM_TRANSFER;
+    integer modTransPerms = PERM_MODIFY | PERM_TRANSFER;
+    string output = "";
+    if ((perm & fullPerms) == fullPerms)
+        output += "full";
+    else if ((perm & copyModPerms) == copyModPerms)
+        output += "copy & modify";
+    else if ((perm & copyTransPerms) == copyTransPerms)
+        output += "copy & transfer";
+    else if ((perm & modTransPerms) == modTransPerms)
+        output += "modify & transfer";
+    else if ((perm & PERM_COPY) == PERM_COPY)
+        output += "copy";
+    else if ((perm & PERM_TRANSFER) == PERM_TRANSFER)
+        output += "transfer";
+    else
+        output += "none";
+    return  output;
+}

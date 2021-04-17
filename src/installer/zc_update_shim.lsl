@@ -121,8 +121,6 @@ string InstallerBox(integer iMode, string sLabel)
     return sBox+" "+sLabel;
 }
 list g_lPkgs;
-list g_lMenuIDs;
-integer g_iMenuStride;
 
 Prompt(key kAv, integer iPage)
 {
@@ -180,7 +178,7 @@ default
         if(!g_iRelayActive)
             llSay(UPDATER_CHANNEL, "pkg_get|"+(string)SECURE);
         else
-            llSay(RELAY_CHANNEL, "pkg_get|"+(string)SECURE);
+            llSay(RELAY_CHANNEL, "wait_prepare|"+(string)SECURE);
     }
     timer()
     {
@@ -202,6 +200,7 @@ default
     }
     link_message(integer iSender, integer iNum, string sStr, key kID)
     {
+        //llSay(0, "COLLAR LINK MESSAGE: "+llDumpList2String([iNum,sStr,kID], " ~ "));
         if(iNum == LOADPIN)
         {
             list lTmp = llParseString2List(sStr, ["@"],[]);
@@ -247,7 +246,9 @@ default
                             llMessageLinked(LINK_SET,1002, "0Please Stand By... Confirming selection!", kAv);
                             // DO MAGIC TO SEND THE PACKAGE LIST, THEN START UPDATE
 
-                            llSay(UPDATER_CHANNEL, "pkg_set|"+llDumpList2String(g_lPkgs,"~"));
+                            if(g_iRelayActive)llSay(RELAY_CHANNEL, "pkg_set|"+llDumpList2String(g_lPkgs,"~"));
+                            else
+                                llSay(UPDATER_CHANNEL, "pkg_set|"+llDumpList2String(g_lPkgs,"~"));
                             llResetTime();
                             g_iPass=3;
                         }
@@ -261,6 +262,7 @@ default
     {
         if(c == SECURE)
         {
+            //llSay(0, "MESSAGE ON SECURE SHIM CHANNEL: "+m);
             list lCmd = llParseString2List(m,["|"],[]);
             if(llList2String(lCmd,0) == "DONE")
             {
@@ -268,7 +270,7 @@ default
                 //llSay(0, "Installation done signal received!");
                 //llSay(0, "Restoring settings, then removing shim");
                 llResetOtherScript("zni_settings");
-                llResetOtherScript("oc_states");
+                llResetOtherScript("zc_states");
                 llSleep(15);
                 llMessageLinked(LINK_SET,REBOOT,"","");
                 llSetRemoteScriptAccessPin(0);
@@ -280,6 +282,14 @@ default
                 g_lPkgs = llParseString2List(llList2String(lCmd,1), ["~"],[]);
 
                 Prompt(llGetOwner(),0);
+            } else if(llList2String(lCmd,0)=="PREP_DONE")
+            {
+                llSleep(2);
+                llMessageLinked(LINK_SET, REBOOT, "", ""); // Prevent the update jail from locking up oc_dialog
+                llSleep(1);
+                llMessageLinked(LINK_SET,STARTUP,"","");
+                llSleep(3);
+                llRegionSayTo(i,RELAY_CHANNEL,"pkg_get");
             } else {
                 //llSay(0, "Unimplemented updater command: "+m);
                 list lOpts = llParseString2List(m,["|"],[]);
@@ -314,7 +324,7 @@ default
                     {
                         if(!bItemMatches)sResponse="INSTALLSTOPPED";
                     } else {
-                        llWhisper(0, "Unrecognized updater signal for required bundle: "+sOption+"|"+sName);
+                        //llWhisper(0, "Unrecognized updater signal for required bundle: "+sOption+"|"+sName);
                     }
                 } else if(sBundleType == "DEPRECATED")
                 {

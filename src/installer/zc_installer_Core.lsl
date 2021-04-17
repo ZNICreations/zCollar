@@ -15,43 +15,10 @@ et al.
 Licensed under the GPLv2. See LICENSE for full details.
 https://github.com/zontreck/zCollar
 */
+#include "MasterFile.lsl"
 
 integer g_iUpdateChan = -7483213;
 integer g_iLegacyUpdateChannel = -7483214;
-
-list g_lDSRequests;
-key NULL=NULL_KEY;
-UpdateDSRequest(key orig, key new, string meta){
-    if(orig == NULL){
-        g_lDSRequests += [new,meta];
-    }else {
-        integer index = HasDSRequest(orig);
-        if(index==-1)return;
-        else{
-            g_lDSRequests = llListReplaceList(g_lDSRequests, [new,meta], index,index+1);
-        }
-    }
-}
-
-string GetDSMeta(key id){
-    integer index=llListFindList(g_lDSRequests,[id]);
-    if(index==-1){
-        return "N/A";
-    }else{
-        return llList2String(g_lDSRequests,index+1);
-    }
-}
-
-integer HasDSRequest(key ID){
-    return llListFindList(g_lDSRequests, [ID]);
-}
-
-DeleteDSReq(key ID){
-    if(HasDSRequest(ID)!=-1)
-        g_lDSRequests = llDeleteSubList(g_lDSRequests, HasDSRequest(ID), HasDSRequest(ID)+1);
-    else return;
-}
-
 
 integer MinorNew = 805000;
 
@@ -146,30 +113,6 @@ Particles(key kTarget) {
         llSensorRepeat("*&^","6b4092ce-5e5a-ff2e-42e0-3d4c1a069b2f",AGENT,0.1,0.1,0.6);
 }
 integer TotalDone;
-string getperms(string inventory)
-{
-    integer perm = llGetInventoryPermMask(inventory,MASK_NEXT);
-    integer fullPerms = PERM_COPY | PERM_MODIFY | PERM_TRANSFER;
-    integer copyModPerms = PERM_COPY | PERM_MODIFY;
-    integer copyTransPerms = PERM_COPY | PERM_TRANSFER;
-    integer modTransPerms = PERM_MODIFY | PERM_TRANSFER;
-    string output = "";
-    if ((perm & fullPerms) == fullPerms)
-        output += "full";
-    else if ((perm & copyModPerms) == copyModPerms)
-        output += "copy & modify";
-    else if ((perm & copyTransPerms) == copyTransPerms)
-        output += "copy & transfer";
-    else if ((perm & modTransPerms) == modTransPerms)
-        output += "modify & transfer";
-    else if ((perm & PERM_COPY) == PERM_COPY)
-        output += "copy";
-    else if ((perm & PERM_TRANSFER) == PERM_TRANSFER)
-        output += "transfer";
-    else
-        output += "none";
-    return  output;
-}
 integer g_iBundleNumber = 0;
 key g_kUpdateTarget;
 list GetBundleInformation()
@@ -372,8 +315,14 @@ default
                         g_iBundleNumber=0;
                         lBundle=GetBundle();
                     }
-                    if(sBundleType!="DEPRECATED")
-                        llGiveInventory(g_kUpdateTarget, bundle_name);
+                    if(sBundleType!="DEPRECATED"){
+                        if(g_kRelay=="")
+                            llGiveInventory(g_kUpdateTarget, bundle_name);
+                        else{
+                            llGiveInventory(g_kRelay, bundle_name);
+                            llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Send|GIVE|"+bundle_name);
+                        }
+                    }
                     if(lBundle==[])
                     {
 
@@ -481,7 +430,7 @@ default
                 if(Ver<MinorNew || llGetOwnerKey(i) == llGetOwner())
                 {
                     if(llGetOwnerKey(i)!=llGetOwner()){
-                        //llSay(0, "Sorry, your version does not support being updated using someone else's updater.");
+                        llSay(0, "Sorry, your version does not support being updated using someone else's updater.");
                         return;
                     }
                     // Do distance check, 20 meters!
@@ -499,7 +448,7 @@ default
                         g_kRelayTarget = i;
                         //llSay(0, "Using New Update style");
                         //llSay(0, "Send: [oc_installer_relay]");
-                        llGiveInventory(i, "oc_installer_relay");  // <-- Uncomment to enable
+                        llGiveInventory(i, "zc_installer_relay");  // <-- Uncomment to enable
 
                         llRegionSayTo(i,c,"UPDATER RELAY"); // <-- Uncomment to enable
                     }
@@ -555,9 +504,14 @@ default
                 llGiveInventory(g_kRelay, "oc_dialog");
                 llGiveInventory(g_kRelay, "zc_update_shim");
 
-                llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Send|INSTALL|oc_dialog");
                 llRegionSayTo(g_kRelay, g_iUpdateChan+1, "ShimSent|"+(string)g_kRelayTarget+"|"+UPDATE_VERSION);
                 // We do not yet have the collar's update pin. The relay will obtain this information so it can install the shim and get things moving!
+            } else if(llList2String(lParam,0) == "shiminstalled" && g_iUpdateRunning)
+            {
+
+                llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Send|INSTALL|oc_dialog");
+                llSleep(5);
+                llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Prepared");
             } else if(llList2String(lParam,0) == "pkg_get" && g_iUpdateRunning)
             {
                 // Send the serialized package list for user selection
@@ -595,37 +549,6 @@ default
                     llGiveInventory(i, llList2String(lOpt,1));
 
                 if(g_kRelay)llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Send|INSTALLSTOPPED|"+llList2String(lOpt,1));
-            } else if(llList2String(lOpt,0) == "PROMPT_INSTALL")
-            {
-                if(g_iPromptListen != -1)llListenRemove(g_iPromptListen);
-                g_iPromptChannel = llRound(llFrand(4832999));
-                g_iPromptListen = llListen(g_iPromptChannel, "", llGetOwnerKey(i), "");
-                g_kPrompt = llGetOwnerKey(i);
-                llResetTime();
-                g_sPrompt="[zCollar Installer]\n \nCurrent Item: "+llList2String(lOpt,1)+"\n\nThis item is not currently installed. It is optional, would you like to install this script?\n\n* Do not use the ignore button, installation cannot proceed without a response";
-                g_lPrompt = ["Install", "Skip"];
-                llDialog(llGetOwnerKey(i), g_sPrompt, g_lPrompt, g_iPromptChannel);
-                g_kPrompt_tmpID = (key)llList2String(lOpt,2);
-                g_iPrompt_tmpLine = (integer)llList2String(lOpt,3);
-                g_sPrompt_tmpName = llList2String(lOpt,1);
-                llSetTimerEvent(1);
-                return; // intentionally exit here
-            } else if(llList2String(lOpt,0)=="PROMPT_REMOVE")
-            {
-
-                if(g_iPromptListen != -1)llListenRemove(g_iPromptListen);
-                g_iPromptChannel = llRound(llFrand(4832999));
-                g_iPromptListen = llListen(g_iPromptChannel, "", llGetOwnerKey(i), "");
-                g_kPrompt = llGetOwnerKey(i);
-                llResetTime();
-                g_sPrompt="[zCollar Installer]\n \nCurrent Item: "+llList2String(lOpt,1)+"\n\nThis item is currently installed. It is optional, would you like to uninstall this script?\n\n* Do not use the ignore button, installation cannot proceed without a response";
-                g_lPrompt = ["Remove", "Skip"];
-                llDialog(llGetOwnerKey(i), g_sPrompt, g_lPrompt, g_iPromptChannel);
-                g_kPrompt_tmpID = (key)llList2String(lOpt,2);
-                g_iPrompt_tmpLine = (integer)llList2String(lOpt,3);
-                g_sPrompt_tmpName = llList2String(lOpt,1);
-                llSetTimerEvent(1);
-                return; // intentionally exit here
 
             } else {
                 //llSay(0, "Unimplemented command: "+llList2String(lOpt,0)+"; "+llList2String(lOpt,1));

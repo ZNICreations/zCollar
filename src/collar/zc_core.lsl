@@ -178,7 +178,7 @@ UserCommand(integer iNum, string sStr, key kID) {
                 g_iUpdatePin = llRound(llFrand(0x7FFFFFFF))+1; // Maximum integer size
                 llSetRemoteScriptAccessPin(g_iUpdatePin);
 
-                //llAllowInventoryDrop(TRUE);
+                llAllowInventoryDrop(TRUE);
                 // Now that a pin is set, scan for a updater and chainload
                 g_iDiscoveredUpdaters=0;
                 g_kUpdater=NULL_KEY;
@@ -187,7 +187,7 @@ UserCommand(integer iNum, string sStr, key kID) {
                 g_iUpdateAuth = iNum;
                 llListenRemove(g_iUpdateListener);
                 g_iUpdateListener = llListen(g_iUpdateChan, "", "", "");
-                llWhisper(g_iUpdateChan, "UPDATE|"+MajorMinor());
+                llWhisper(g_iUpdateChan, "UPDATE|"+COLLAR_VERSION);
                 g_iWaitUpdate = TRUE;
                 llSetTimerEvent(5);
             } else llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to update the collar", kID);
@@ -304,8 +304,6 @@ integer g_iUpdateAuth;
 integer g_iWaitUpdate;
 integer g_iUpdateChan = -7483213;
 key g_kWearer;
-list g_lMenuIDs;
-integer g_iMenuStride;
 integer g_iLocked=FALSE;
 Compare(string V1, string V2){
     NEW_VERSION=V2;
