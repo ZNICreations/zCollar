@@ -1,5 +1,5 @@
 /*
-This file is a part of OpenCollar
+This file is a part of zCollar
 Copyright 2021
 
 : Contributors :
@@ -8,7 +8,7 @@ Copyright 2021
 
 et al.
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/OpenCollarTeam/OpenCollar
+https://github.com/zontreck/zCollar
 
 */
 
