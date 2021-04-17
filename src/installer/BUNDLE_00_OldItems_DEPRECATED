@@ -25,3 +25,7 @@ SCRIPT|oc_settings
 SCRIPT|oc_OwnerOnlineCheck
 SCRIPT|oc_themes
 SCRIPT|zc_addons
+SCRIPT|oc_anim
+SCRIPT|oc_detach
+SCRIPT|oc_states
+SCRIPT|oc_particle

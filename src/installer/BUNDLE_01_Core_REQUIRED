@@ -1,5 +1,5 @@
 SCRIPT|zc_linkprim_hammer
-SCRIPT|oc_states
+SCRIPT|zc_states
 SCRIPT|zc_core
 SCRIPT|zc_api
 SCRIPT|zni_settings

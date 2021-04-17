@@ -86,6 +86,26 @@ string AuthMask2Str(integer iMask)
     return llDumpList2String(lAuth, ", ");
 }
 
+// Test order: iMask1>iMask2
+integer MaskOutranks(integer iMask1, integer iMask2)
+{
+    // If the first mask has the owner bit, and the second mask has the owner bit, then false.
+    if(iMask1&C_OWNER && !(iMask2&C_OWNER))return TRUE;
+    else if(iMask1&C_OWNER && iMask2&C_OWNER)return TRUE;
+
+    if(iMask1&C_TRUSTED && !(iMask2&(C_OWNER|C_TRUSTED)))return TRUE;
+    else if(iMask1&C_TRUSTED && iMask2&C_TRUSTED && !(iMask2&(C_OWNER)))return TRUE;
+
+    if(iMask1&C_WEARER && !(iMask2&(C_OWNER|C_TRUSTED|C_GROUP)))return TRUE;
+    else if(iMask1 &C_WEARER && iMask2&C_WEARER && !(iMask2&C_OWNER|C_GROUP|C_TRUSTED))return TRUE;
+
+    if(iMask1&C_BLOCKED)return FALSE;
+    if(iMask1&C_GROUP && !(iMask2&(C_OWNER|C_TRUSTED)))return TRUE;
+    if(iMask1&C_PUBLIC)return FALSE;
+
+    return FALSE;
+}
+
 
 integer REBOOT = -1000;
 string UPMENU = "BACK";
@@ -227,6 +247,7 @@ integer ANIM_STOP = 7001;
 integer ANIM_LIST_REQ = 7002;
 integer ANIM_LIST_RES = 7003;
 
+integer CMD_PARTICLE = 20000;
 
 string UP_ARROW = "↑";
 string DOWN_ARROW = "↓";

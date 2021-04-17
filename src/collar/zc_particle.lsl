@@ -1,58 +1,36 @@
-// This file is part of OpenCollar.
-// Copyright (c) 2008 - 2017 Lulu Pink, Nandana Singh, Garvin Twine,
-// Cleo Collins, Satomi Ahn, Joy Stipe, Wendy Starfall, Romka Swallowtail,
-// lillith xue, littlemousy et al.
-// Licensed under the GPLv2.  See LICENSE for full details.
+/*
+This file is a part of zCollar.
+Copyright 2021
+
+: Contributors :
+
+Aria (Tashia Redrose)
+    * April 2021        - Rebranded oc_particle under zCollar
+    * March 2021         - Created zc_update_shim
+
+et al.
+
+
+Licensed under the GPLv2. See LICENSE for full details.
+https://github.com/zontreck/zCollar
+*/
+
+#include "MasterFile.lsl"
 
 string g_sScriptVersion = "8.0";
-integer LINK_CMD_DEBUG=1999;
-//MESSAGE MAP
-//integer CMD_ZERO = 0;
-integer CMD_OWNER = 500;
-integer CMD_TRUSTED = 501;
-//integer CMD_GROUP = 502;
-integer CMD_WEARER = 503;
-integer CMD_EVERYONE = 504;
-//integer CMD_RLV_RELAY = 507;
-//integer CMD_SAFEWORD = 510;
-//integer CMD_RELAY_SAFEWORD = 511;
-//integer CMD_BLOCKED = 520;
-//integer TIMEOUT_READY = 30497;
-//integer TIMEOUT_REGISTER = 30498;
-//integer TIMEOUT_FIRED = 30499;
 
 
 integer g_iLeashedToAvatar=FALSE;
 
-//integer POPUP_HELP          = 1001;
-integer NOTIFY              = 1002;
-//integer SAY                 = 1004;
-integer REBOOT              = -1000;
-// -- SETTINGS
-integer LM_SETTING_SAVE     = 2000;
-//integer LM_SETTING_REQUEST = 2001;
-integer LM_SETTING_RESPONSE = 2002;
-integer LM_SETTING_DELETE   = 2003;
-integer LM_SETTING_EMPTY            = 2004;
-// -- MENU/DIALOG
-integer MENUNAME_REQUEST    = 3000;
-integer MENUNAME_RESPONSE   = 3001;
-//integer MENUNAME_REMOVE  = 3003;
-
-integer DIALOG              = -9000;
-integer DIALOG_RESPONSE     = -9001;
-integer DIALOG_TIMEOUT      = -9002;
 
 integer g_iChan_LOCKMEISTER = -8888;
 integer g_iChan_LOCKGUARD   = -9119;
 //integer g_iLMListener;
 //integer g_iLMListernerDetach;
 
-integer CMD_PARTICLE = 20000;
 
 
 // --- menu tokens ---
-string UPMENU       = "BACK";
 string PARENTMENU   = "Leash";
 string SUBMENU      = "Configure";
 string L_COLOR      = "color";
@@ -234,42 +212,6 @@ StopParticles(integer iEnd) {
        // llSensorRemove();
     }
 }
-/*
-key findPrimKey(string sDesc)
-{
-    integer i;
-    for (i=1;i<llGetNumberOfPrims()+1;++i)
-    {
-        if (llList2String(llGetLinkPrimitiveParams(i,[PRIM_NAME]),0) == sDesc) return llGetLinkKey(i);
-    }
-    return NULL_KEY;
-}
-
-doClearChain(string sChainCMD)
-{
-    if (sChainCMD == "all") {
-        integer i;
-        for (i=1;i<llGetNumberOfPrims()+1;++i)
-        {
-            llLinkParticleSystem(i,[]);
-        }
-        g_lCurrentChains = [];
-    } else {
-        list lRemChains = [];
-        list lChains = llParseString2List(sChainCMD,["~"],[]); // Could be a string like "point=target~point=target..." or "point~point..."
-        integer i;
-        for (i=0;i<llGetListLength(lChains);++i) lRemChains += [llList2String(llParseString2List(llList2String(lChains,i),["="],[]),0)]; // Remove the targets out of the string
-
-        for (i=1;i<llGetNumberOfPrims()+1;++i)
-        {
-            string sDesc = llList2String(llGetLinkPrimitiveParams(i,[PRIM_NAME]),0);
-            if (llListFindList(lRemChains,[sDesc]) > -1) llLinkParticleSystem(i,[]);
-            integer iIndex = llListFindList(g_lCurrentChains,[sDesc]);
-            if (iIndex > -1) g_lCurrentChains = llDeleteSubList(g_lCurrentChains,iIndex,iIndex+1);
-        }
-    }
-}
-*/
 
 string Vec2String(vector vVec) {
     list lParts = [vVec.x, vVec.y, vVec.z];
@@ -437,20 +379,8 @@ LMSay() {
     llSetTimerEvent(1.0);
 }
 
-DebugOutput(key kID, list ITEMS){
-    integer i=0;
-    integer end=llGetListLength(ITEMS);
-    string final;
-    for(i=0;i<end;i++){
-        final+=llList2String(ITEMS,i)+" ";
-    }
-    llInstantMessage(kID, llGetScriptName() +final);
-}
 integer g_iPotentialCoffle=FALSE;
 
-integer ALIVE = -55;
-integer READY = -56;
-integer STARTUP = -57;
 default
 {
     on_rez(integer iNum){
@@ -499,22 +429,25 @@ state active
                 StartParticles(g_kParticleTarget);
                 if (bLeasherIsAv) LMSay();
             }
-        } else if (iNum >= CMD_OWNER && iNum <= CMD_EVERYONE) {
-            if (llToLower(sMessage) == "leash configure") {
-                if(iNum <= CMD_TRUSTED || iNum==CMD_WEARER) ConfigureMenu(kMessageID, iNum);
+        } else if (iNum == COMMAND) {
+            list lTmp = llParseString2List(sMessage,["|>"],[]);
+            integer iMask = llList2Integer(lTmp,0);
+            string sCmd = llList2String(lTmp,1);
+            if (llToLower(sCmd) == "leash configure") {
+                if(iNum &(C_WEARER|C_TRUSTED|C_OWNER)) ConfigureMenu(kMessageID, iMask);
                 else llMessageLinked(LINK_SET,NOTIFY,"0"+"%NOACCESS% to configuring the leash particles",kMessageID);
-            } else if (sMessage == "menu "+SUBMENU) {
-                if(iNum <= CMD_TRUSTED || iNum==CMD_WEARER) ConfigureMenu(kMessageID, iNum);
+            } else if (sCmd == "menu "+SUBMENU) {
+                if(iNum &(C_WEARER|C_TRUSTED|C_OWNER)) ConfigureMenu(kMessageID, iMask);
                 else {
                     llMessageLinked(LINK_SET,NOTIFY,"0"+"%NOACCESS% to leash configure menu",kMessageID);
-                    llMessageLinked(LINK_SET, iNum, "menu "+PARENTMENU, kMessageID);
+                    llMessageLinked(LINK_SET, COMMAND, (string)iMask+ "|>menu "+PARENTMENU, kMessageID);
                 }
-            } else if (llToLower(sMessage) == "particle reset") {
+            } else if (llToLower(sCmd) == "particle reset") {
                 g_lSettings = []; // clear current settings
                 if (kMessageID) llMessageLinked(LINK_SET,NOTIFY,"0"+"Leash-settings restored to %DEVICETYPE% defaults.",kMessageID);
                 llMessageLinked(LINK_SET, LM_SETTING_DELETE, g_sSettingToken + "all", "");
                 GetSettings(TRUE);
-            } else if (llToLower(sMessage) == "theme particle sent")
+            } else if (llToLower(sCmd) == "theme particle sent")
                 GetSettings(TRUE);
         } else if (iNum == MENUNAME_REQUEST && sMessage == PARENTMENU)
             llMessageLinked(iSender, MENUNAME_RESPONSE, PARENTMENU + "|" + SUBMENU, "");
@@ -529,7 +462,7 @@ state active
                 string sMenu=llList2String(g_lMenuIDs, iMenuIndex + 1);
                 g_lMenuIDs = llDeleteSubList(g_lMenuIDs, iMenuIndex - 1, iMenuIndex - 2 + g_iMenuStride);
                 if (sButton == UPMENU) {
-                    if(sMenu == "configure") llMessageLinked(LINK_SET, iAuth, "menu " + PARENTMENU, kAv);
+                    if(sMenu == "configure") llMessageLinked(LINK_SET, COMMAND, (string)iAuth+ "|>menu " + PARENTMENU, kAv);
                     else ConfigureMenu(kAv, iAuth);
                 } else  if (sMenu == "configure") {
                     string sButtonType = Uncheckbox(sButton);
@@ -544,17 +477,17 @@ state active
                         SaveSettings(sButtonType, (string)g_iParticleGlow, TRUE);
                     } else if(sButtonType == L_TURN) {
                         g_iTurnMode = 1-g_iTurnMode;
-                        if (g_iTurnMode) llMessageLinked(LINK_SET, iAuth, "turn on", kAv);
-                        else llMessageLinked(LINK_SET, iAuth, "turn off", kAv);
+                        if (g_iTurnMode) llMessageLinked(LINK_SET, COMMAND, (string)iAuth+ "|>turn on", kAv);
+                        else llMessageLinked(LINK_SET, COMMAND, (string)iAuth+ "|>turn off", kAv);
                     } else if(sButtonType == L_STRICT) {
                         if (!g_iStrictMode) {
                             g_iStrictMode = TRUE;
                             g_iStrictRank = iAuth;
-                            llMessageLinked(LINK_SET, iAuth, "strict on", kAv);
+                            llMessageLinked(LINK_SET,COMMAND, (string)iAuth+ "|>strict on", kAv);
                         } else if (iAuth <= g_iStrictRank) {
                             g_iStrictMode = FALSE;
                             g_iStrictRank = iAuth;
-                            llMessageLinked(LINK_SET, iAuth, "strict off", kAv);
+                            llMessageLinked(LINK_SET, COMMAND, (string)iAuth+ "|>strict off", kAv);
                         } else llMessageLinked(LINK_SET, NOTIFY,"0%NOACCESS% to changing strict settings",kAv);
                     } else if(sButtonType == L_RIBBON_TEX) {
 

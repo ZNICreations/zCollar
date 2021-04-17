@@ -1,12 +1,13 @@
 
 /*
-This file is a part of OpenCollar.
+This file is a part of zCollar.
 Copyright ©2020
 
 
 : Contributors :
 
 Aria (Tashia Redrose)
+    * April 2021        -       Rebranded under zCollar
     *August 2020       -       Created oc_states
                     -           Due to significant issues with original implementation, States has been turned into a anti-crash script instead of a script state manager.
                     -           Repurpose oc_states to be anti-crash and a interactive settings editor.
@@ -14,44 +15,14 @@ Aria (Tashia Redrose)
 
 et al.
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/OpenCollarTeam/OpenCollar
+https://github.com/zontreck/zCollar
 
 */
+#include "MasterFile.lsl"
 
-
-//integer CMD_ZERO = 0;
-integer CMD_OWNER = 500;
-//integer CMD_TRUSTED = 501;
-//integer CMD_GROUP = 502;
-//integer CMD_WEARER = 503;
-integer CMD_EVERYONE = 504;
-//integer CMD_BLOCKED = 598; // <--- Used in auth_request, will not return on a CMD_ZERO
-//integer CMD_RLV_RELAY = 507;
-//integer CMD_SAFEWORD = 510;
-//integer CMD_RELAY_SAFEWORD = 511;
-//integer CMD_NOACCESS=599;
-
-integer TIMEOUT_READY = 30497;
-integer TIMEOUT_REGISTER = 30498;
-integer TIMEOUT_FIRED = 30499;
 
 integer g_iVerbosityLevel = 1;
 
-/*list StrideOfList(list src, integer stride, integer start, integer end)
-{
-    list l = [];
-    integer ll = llGetListLength(src);
-    if(start < 0)start += ll;
-    if(end < 0)end += ll;
-    if(end < start) return llList2List(src, start, start);
-    while(start <= end)
-    {
-        l += llList2List(src, start, start);
-        start += stride;
-    }
-    return l;
-}*/
-//integer NOTIFY_OWNERS=1003;
 
 
 
@@ -59,7 +30,7 @@ SettingsMenu(integer stridePos, key kAv, integer iAuth)
 {
     string sText = "OpenCollar - Interactive Settings editor";
     list lBtns = [];
-    if(iAuth != CMD_OWNER){
+    if(!(iAuth & C_OWNER)){
         sText+="\n\nOnly owner may use this feature";
         Dialog(kAv, sText, [], [UPMENU], 0, iAuth, "Menu~Main");
         return;
@@ -112,31 +83,6 @@ list setor(integer test, list a, list b){
     else return b;
 }
 
-integer NOTIFY = 1002;
-integer REBOOT = -1000;
-
-integer LM_SETTING_SAVE = 2000;//scripts send messages on this channel to have settings saved
-//str must be in form of "token=value"
-integer LM_SETTING_REQUEST = 2001;//when startup, scripts send requests for settings on this channel
-integer LM_SETTING_RESPONSE = 2002;//the settings script sends responses on this channel
-integer LM_SETTING_DELETE = 2003;//delete token from settings
-//integer LM_SETTING_EMPTY = 2004;//sent when a token has no value
-
-//integer MENUNAME_REQUEST = 3000;
-//integer MENUNAME_RESPONSE = 3001;
-//integer MENUNAME_REMOVE = 3003;
-
-//integer RLV_CMD = 6000;
-integer RLV_REFRESH = 6001;//RLV plugins should reinstate their restrictions upon receiving this message.
-
-//integer RLV_OFF = 6100; // send to inform plugins that RLV is disabled now, no message or key needed
-//integer RLV_ON = 6101; // send to inform plugins that RLV is enabled now, no message or key needed
-
-integer DIALOG = -9000;
-integer DIALOG_RESPONSE = -9001;
-integer DIALOG_TIMEOUT = -9002;
-string UPMENU = "BACK";
-//string ALL = "ALL";
 
 Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName) {
     key kMenuID = llGenerateKey();
@@ -167,11 +113,6 @@ list g_lTimers; // signal, start_time, seconds_from
 integer g_iExpectAlive=0;
 list g_lAlive;
 integer g_iPasses=-1;
-
-
-integer ALIVE = -55;
-integer READY = -56;
-integer STARTUP = -57;
 default
 {
     state_entry()
@@ -276,8 +217,12 @@ default
     link_message(integer iSender, integer iNum, string sStr, key kID){
         if(iNum == REBOOT && sStr == "reboot --f")llResetScript();
 
-        if(iNum>=CMD_OWNER && iNum <= CMD_EVERYONE){
-            if(sStr == "fix"){
+        if(iNum == COMMAND){
+            list lTmp = llParseString2List(sStr,["|>"],[]);
+            integer iMask = llList2Integer(lTmp,0);
+            string sCmd = llList2String(lTmp,1);
+            if(!(iMask&(C_OWNER)))return;
+            if(sCmd == "fix"){
                 g_iExpectAlive=1;
                 llResetTime();
                 g_iPasses=0;
@@ -315,11 +260,11 @@ default
                 if(sMenu == "Menu~Main"){
                     if(sMsg == UPMENU){
                         iRemenu=FALSE;
-                        llMessageLinked(LINK_SET, iAuth, "menu Settings", kAv);
+                        llMessageLinked(LINK_SET, COMMAND, (string)iAuth+ "|>menu Settings", kAv);
                     }
                 } else if(sMenu == "settings~edit~0"){
                     if(sMsg == UPMENU){
-                        llMessageLinked(LINK_SET, iAuth, "menu Settings", kAv);
+                        llMessageLinked(LINK_SET, COMMAND, (string)iAuth +"|>menu Settings", kAv);
                         return;
                     } else if(sMsg == "+ NEW"){
                         SettingsMenu(8, kAv, iAuth);
