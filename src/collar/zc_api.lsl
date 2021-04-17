@@ -517,7 +517,7 @@ state active
             string CMD=llGetSubString(m,llStringLength(g_sPrefix),-1);
             if(llGetSubString(CMD,0,0)==" ")CMD=llDumpList2String(llParseString2List(CMD,[" "],[]), " ");
             llMessageLinked(LINK_SET, CMD_ZERO, CMD, llGetOwnerKey(i));
-        } else if(llGetSubString(m,0,0) == "*"){
+        } else if(llGetSubString(m,0,0) == "*" && (llGetOwnerKey(i)==i)){ // only for avatars
             string CMD = llGetSubString(m,1,-1);
             if(llGetSubString(CMD,0,0)==" ")CMD=llDumpList2String(llParseString2List(CMD,[" "],[])," ");
             llMessageLinked(LINK_SET, CMD_ZERO, CMD, llGetOwnerKey(i));
