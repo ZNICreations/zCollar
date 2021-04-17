@@ -19,15 +19,13 @@ Licensed under the GPLv2. See LICENSE for full details.
 https://github.com/zontreck/zCollar
 
 */
+#include "MasterFile.lsl"
 list g_lOwner;
 list g_lTrust;
 list g_lBlock;
 
 key g_kTempOwner;
 
-integer MENUNAME_REQUEST = 3000;
-integer MENUNAME_RESPONSE = 3001;
-integer MENUNAME_REMOVE = 3003;
 integer g_iMode;
 string g_sSafeword = "RED";
 integer g_iSafewordDisable=FALSE;
@@ -42,104 +40,17 @@ integer ACTION_BLOCK = 32;
 //key g_kLastGranted;
 //string g_sLastGranted;
 
-//integer TIMEOUT_READY = 30497;
-integer TIMEOUT_REGISTER = 30498;
-integer TIMEOUT_FIRED = 30499;
 
 
-
-//integer RLV_CMD = 6000;
-integer RLV_REFRESH = 6001;//RLV plugins should reinstate their restrictions upon receiving this message.
-
-//integer RLV_OFF = 6100; // send to inform plugins that RLV is disabled now, no message or key needed
-//integer RLV_ON = 6101; // send to inform plugins that RLV is enabled now, no message or key needed
-//MESSAGE MAP
-integer AUTH_REQUEST = 600;
-integer AUTH_REPLY=601;
-
-integer CMD_ZERO = 0;
-integer CMD_OWNER = 500;
-integer CMD_TRUSTED = 501;
-integer CMD_GROUP = 502;
-integer CMD_WEARER = 503;
-integer CMD_EVERYONE = 504;
-integer CMD_BLOCKED = 598; // <--- Used in auth_request, will not return on a CMD_ZERO
-//integer CMD_RLV_RELAY = 507;
-integer CMD_SAFEWORD = 510;
-//integer CMD_RELAY_SAFEWORD = 511;
-integer CMD_NOACCESS=599;
-
-string Auth2Str(integer iAuth){
-    if(iAuth == CMD_OWNER)return "Owner";
-    else if(iAuth == CMD_TRUSTED)return "Trusted";
-    else if(iAuth == CMD_GROUP)return "Group";
-    else if(iAuth == CMD_WEARER)return "Wearer";
-    else if(iAuth == CMD_EVERYONE)return "Public";
-    else if(iAuth == CMD_BLOCKED)return "Blocked";
-    else if(iAuth == CMD_NOACCESS)return "No Access";
-    else return "Unknown = "+(string)iAuth;
-}
-
-integer REBOOT = -1000;
-string UPMENU = "BACK";
-integer DIALOG = -9000;
-integer DIALOG_RESPONSE = -9001;
-integer DIALOG_TIMEOUT = -9002;
-integer LM_SETTING_SAVE = 2000;//scripts send messages on this channel to have settings saved
-//str must be in form of "token=value"
-integer LM_SETTING_REQUEST = 2001;//when startup, scripts send requests for settings on this channel
-integer LM_SETTING_RESPONSE = 2002;//the settings script sends responses on this channel
-integer LM_SETTING_DELETE = 2003;//delete token from settings
-//integer LM_SETTING_EMPTY = 2004;//sent when a token has no value
-
-Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName) {
-    key kMenuID = llGenerateKey();
-    llMessageLinked(LINK_SET, DIALOG, (string)kID + "|" + sPrompt + "|" + (string)iPage + "|" + llDumpList2String(lChoices, "`") + "|" + llDumpList2String(lUtilityButtons, "`") + "|" + (string)iAuth, kMenuID);
-
-    integer iIndex = llListFindList(g_lMenuIDs, [kID]);
-    if (~iIndex) g_lMenuIDs = llListReplaceList(g_lMenuIDs, [kID, kMenuID, sName], iIndex, iIndex + g_iMenuStride - 1);
-    else g_lMenuIDs += [kID, kMenuID, sName];
-}
-string SLURL(key kID){
-    return "secondlife:///app/agent/"+(string)kID+"/about";
-}
 key g_kGroup=NULL_KEY;
 key g_kWearer;
 key g_kTry;
 integer g_iCurrentAuth;
 key g_kMenuUser;
-integer CalcAuth(key kID, integer iVerbose){
-    string sID = (string)kID;
-    // First check
-    if(llGetListLength(g_lOwner) == 0 && kID==g_kWearer)
-        return CMD_OWNER;
-    else{
-        if(llListFindList(g_lBlock,[sID])!=-1)return CMD_BLOCKED;
-        if(llListFindList(g_lOwner, [sID])!=-1)return CMD_OWNER;
-        if(llListFindList(g_lTrust,[sID])!=-1)return CMD_TRUSTED;
-        if(g_kTempOwner == kID) return CMD_TRUSTED;
-        if(kID==g_kWearer)return CMD_WEARER;
-        if(in_range(kID)){
-            if(g_kGroup!=NULL_KEY){
-                if(llSameGroup(kID))return CMD_GROUP;
-            }
-
-            if(g_iPublic)return CMD_EVERYONE;
-        }else{
-            if(iVerbose)
-                llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% because you are out of range", kID);
-        }
-    }
-
-
-    return CMD_NOACCESS;
-}
 
 list g_lMenuIDs;
 integer g_iMenuStride;
 
-integer NOTIFY = 1002;
-integer NOTIFY_OWNERS=1003;
 integer g_iPublic;
 string g_sPrefix;
 integer g_iChannel=1;
@@ -185,15 +96,15 @@ DoListeners(){
 }
 integer g_iRunaway=TRUE;
 RunawayMenu(key kID, integer iAuth){
-    if(iAuth == CMD_OWNER || iAuth==CMD_WEARER){
+    if(iAuth &(C_OWNER|C_WEARER)){
         string sPrompt = "\n[Runaway]\n\nAre you sure you want to runaway from all owners?\n\n* This action will reset your owners list, trusted list, and your blocked avatars list.";
         list lButtons = ["Yes", "No"];
 
-        if(iAuth == CMD_OWNER){
+        if(iAuth & C_OWNER){
             sPrompt+="\n\nAs the owner you have the abliity to disable or enable runaway.";
             if(g_iRunaway)lButtons+=["Disable"];
             else lButtons += ["Enable"];
-        } else if(iAuth == CMD_WEARER){
+        } else if(iAuth & C_WEARER){
             if(g_iRunaway){
                 sPrompt += "\n\nAs the wearer, you can choose to disable your ability to runaway, this action cannot be reversed by you";
                 lButtons += ["Disable"];
@@ -211,7 +122,7 @@ WearerConfirmListUpdate(key kID, string sReason)
     //key g_kAdder = g_kMenuUser;
     //g_kMenuUser=kID;
     // This should only be triggered if the wearer is being affected by a sensitive action
-    Dialog(g_kWearer, "\n[Access]\n\nsecondlife:///app/agent/"+(string)kID+"/about wants change your access level.\n\nChange that will occur: "+sReason+"\n\nYou may grant or deny this action.", [], ["Allow", "Disallow"], 0, CMD_WEARER, "WearerConfirmation");
+    Dialog(g_kWearer, "\n[Access]\n\nsecondlife:///app/agent/"+(string)kID+"/about wants change your access level.\n\nChange that will occur: "+sReason+"\n\nYou may grant or deny this action.", [], ["Allow", "Disallow"], 0, C_WEARER, "WearerConfirmation");
 }
 
 integer g_iGrantedConsent=FALSE;
@@ -308,15 +219,15 @@ integer in_range(key kID){
 
 UserCommand(integer iAuth, string sCmd, key kID){
     if(sCmd == "getauth"){
-        llMessageLinked(LINK_SET, NOTIFY, "0Your access level is: "+Auth2Str(iAuth)+" ("+(string)iAuth+")", kID);
+        llMessageLinked(LINK_SET, NOTIFY, "0Your access level is: "+AuthMask2Str(iAuth)+" ("+(string)iAuth+")", kID);
         return;
     } else if(sCmd == "debug" || sCmd == "versions"){
         // here's where the debug or versions commands will ask consent, then trigger
     } else if(sCmd == "help"){
-        if(iAuth >= CMD_OWNER && iAuth <= CMD_EVERYONE){
-            llGiveInventory(kID, "OpenCollar_Help");
+        if(iAuth & (C_OWNER|C_TRUSTED|C_WEARER|C_GROUP|C_PUBLIC) ){
+            llGiveInventory(kID, "zCollar_Help");
             llSleep(2);
-            llLoadURL(kID, "Want to open our website for further help?", "https://opencollar.cc");
+            llLoadURL(kID, "Want to open our website for further help?", "https://zontreck.dev");
         }
     }
     if((llToLower(sCmd) == "menu runaway" || llToLower(sCmd) == "runaway") && g_iRunawayMode!=2){
@@ -324,7 +235,7 @@ UserCommand(integer iAuth, string sCmd, key kID){
         RunawayMenu(kID,iAuth);
     }
 
-    if(iAuth == CMD_OWNER){
+    if(iAuth & C_OWNER){
         if(sCmd == "safeword-disable")g_iSafewordDisable=TRUE;
         else if(sCmd == "safeword-enable")g_iSafewordDisable=FALSE;
 
@@ -368,15 +279,15 @@ UserCommand(integer iAuth, string sCmd, key kID){
                     else if(sType == "trust")lOpts=g_lTrust;
                     else if(sType == "block")lOpts=g_lBlock;
 
-                    Dialog(kID, "OpenCollar\n\nRemove "+sType, lOpts, [UPMENU],0,iAuth,"removeUser");
+                    Dialog(kID, "zCollar\n\nRemove "+sType, lOpts, [UPMENU],0,iAuth,"removeUser");
                 }
             }else {
                 UpdateLists((key)sID, kID);
             }
         }
     }
-    if (iAuth <CMD_OWNER || iAuth>CMD_EVERYONE) return;
-    if (iAuth == CMD_OWNER && sCmd == "runaway") {
+    if (iAuth &(C_WEARER|C_TRUSTED|C_PUBLIC|C_GROUP|C_BLOCKED)) return;
+    if (iAuth &C_OWNER && sCmd == "runaway") {
         // trigger runaway sequence if approval was given
         if(g_iRunawayMode == 2){
             g_iRunawayMode=-1;
@@ -391,26 +302,11 @@ UserCommand(integer iAuth, string sCmd, key kID){
     }
 
      if(sCmd == "print auth"){
-         if(iAuth == CMD_OWNER || iAuth == CMD_TRUSTED || iAuth == CMD_WEARER)
+         if(iAuth &(C_OWNER|C_TRUSTED|C_WEARER))
             PrintAccess(kID);
         else
             llMessageLinked(LINK_SET,NOTIFY, "0%NOACCESS% to printing access lists!", kID);
     }
-}
-
-list StrideOfList(list src, integer stride, integer start, integer end)
-{
-    list l = [];
-    integer ll = llGetListLength(src);
-    if(start < 0)start += ll;
-    if(end < 0)end += ll;
-    if(end < start) return llList2List(src, start, start);
-    while(start <= end)
-    {
-        l += llList2List(src, start, start);
-        start += stride;
-    }
-    return l;
 }
 
 SW(){
@@ -419,17 +315,6 @@ SW(){
 }
 //integer g_iInterfaceChannel;
 //integer g_iLMCounter=0;
-string tf(integer a){
-    if(a)return "true";
-    return "false";
-}
-
-integer ALIVE = -55;
-integer READY = -56;
-integer STARTUP = -57;
-
-integer SENSORDIALOG = -9003;
-integer SAY = 1004;
 integer g_iInterfaceChannel;
 
 
@@ -501,9 +386,9 @@ state active
             //do nothing if wearer isnt owner of the object
             if (llGetOwnerKey(i) != g_kWearer) return;
             //play ping pong with the Sub AO
-            if (m == "OpenCollar?") llRegionSayTo(g_kWearer, g_iInterfaceChannel, "OpenCollar=Yes");
+            if (m == "zCollar?") llRegionSayTo(g_kWearer, g_iInterfaceChannel, "zCollar=Yes");
             else if (m == "OpenCollar=Yes") {
-                llOwnerSay("\n\nATTENTION: You are attempting to wear more than one OpenCollar core. This causes errors with other compatible accessories and your RLV relay. For a smooth experience, and to avoid wearing unnecessary script duplicates, please consider to take off \""+n+"\" manually if it doesn't detach automatically.\n");
+                llOwnerSay("\n\nATTENTION: You are attempting to wear more than one zCollar core. This causes errors with other compatible accessories and your RLV relay. For a smooth experience, and to avoid wearing unnecessary script duplicates, please consider to take off \""+n+"\" manually if it doesn't detach automatically.\n");
                 llRegionSayTo(i,g_iInterfaceChannel,"There can be only one!");
             } else if (m == "There can be only one!" ) {
                 llOwnerSay("/me has been detached.");
@@ -539,15 +424,18 @@ state active
         //if(iNum>=CMD_OWNER && iNum <= CMD_NOACCESS) llOwnerSay(llDumpList2String([iSender, iNum, sStr, kID], " ^ "));
         if(iNum == CMD_ZERO){
             if(sStr == "initialize")return;
-            integer iAuth = CalcAuth(kID, TRUE);
+            integer iAuth = CalcAuthMask(kID, TRUE);
             //llOwnerSay( "{API} Calculate auth for "+(string)kID+"="+(string)iAuth+";"+sStr);
-            llMessageLinked(LINK_SET, iAuth, sStr, kID);
+            llMessageLinked(LINK_SET, COMMAND, (string)iAuth+"|>"+ sStr, kID);
         } else if(iNum == AUTH_REQUEST){
-            integer iAuth = CalcAuth(kID, FALSE);
+            integer iAuth = CalcAuthMask(kID, FALSE);
             //llOwnerSay("{API} Calculate auth for "+(string)kID+"="+(string)iAuth+";"+sStr);
             llMessageLinked(LINK_SET, AUTH_REPLY, "AuthReply|"+(string)kID+"|"+(string)iAuth,sStr);
-        } else if(iNum >= CMD_OWNER && iNum <= CMD_NOACCESS) UserCommand(iNum, sStr, kID);
-
+        } else if(iNum ==COMMAND){
+            list lTmp = llParseString2List(sStr,["|>"],[]);
+            integer iMask = (integer)llList2String(lTmp,0);
+            UserCommand(iMask, llList2String(lTmp,1), kID);
+        }
         else if (iNum == DIALOG_TIMEOUT) {
             integer iMenuIndex = llListFindList(g_lMenuIDs, [kID]);
             g_lMenuIDs = llDeleteSubList(g_lMenuIDs, iMenuIndex - 1, iMenuIndex +3);  //remove stride from g_lMenuIDs
@@ -680,7 +568,7 @@ state active
                         //UpdateLists((key)sMsg);
                         g_kTry = (key)sMsg;
                         if(!(g_iMode&ACTION_BLOCK))
-                            Dialog(g_kTry, "OpenCollar\n\n"+SLURL(kAv)+" is trying to add you to an access list, do you agree?", ["Yes", "No"], [], 0, CMD_NOACCESS, "scan~confirm");
+                            Dialog(g_kTry, "zCollar\n\n"+SLURL(kAv)+" is trying to add you to an access list, do you agree?", ["Yes", "No"], [], 0, (C_ZERO), "scan~confirm");
                         else UpdateLists((key)sMsg, g_kMenuUser);
                     }
                 } else if(sMenu == "WearerConfirmation"){
@@ -714,7 +602,7 @@ state active
                         UpdateLists(sMsg, g_kMenuUser);
                     }
                 } else if(sMenu == "RunawayMenu"){
-                    if(sMsg == "Enable" && iAuth == CMD_OWNER){
+                    if(sMsg == "Enable" && iAuth & C_OWNER){
                         g_iRunaway=TRUE;
                         llMessageLinked(LINK_SET, LM_SETTING_DELETE, "AUTH_runaway","origin");
                         llMessageLinked(LINK_SET, TIMEOUT_REGISTER, "5", "spring_access:"+(string)kAv);
@@ -729,12 +617,12 @@ state active
                         return;
                     } else if(sMsg == "Yes"){
                         // trigger runaway
-                        if((iAuth == CMD_WEARER || iAuth == CMD_OWNER ) && g_iRunaway){
+                        if(iAuth &(C_WEARER|C_OWNER) && g_iRunaway){
                             g_iRunawayMode=2;
                             llMessageLinked(LINK_SET, NOTIFY_OWNERS, "%WEARERNAME% has runaway.", "");
-                            llMessageLinked(LINK_SET, CMD_OWNER, "runaway", g_kWearer);
+                            llMessageLinked(LINK_SET, COMMAND, "1|>runaway", g_kWearer);
                             llMessageLinked(LINK_SET, CMD_SAFEWORD, "safeword", "");
-                            llMessageLinked(LINK_SET, CMD_OWNER, "clear", g_kWearer);
+                            llMessageLinked(LINK_SET, COMMAND, "1|>clear", g_kWearer);
 
                             llMessageLinked(LINK_SET, TIMEOUT_REGISTER, "5", "spring_access:"+(string)kAv);
                         }
@@ -769,7 +657,7 @@ state active
             }
         }
 
-        Dialog(g_kMenuUser, "OpenCollar\nAdd Menu", lPeople, [">Wearer<",UPMENU], 0, g_iCurrentAuth, "scan~add");
+        Dialog(g_kMenuUser, "zCollar\nAdd Menu", lPeople, [">Wearer<",UPMENU], 0, g_iCurrentAuth, "scan~add");
     }
 
     no_sensor(){

@@ -15,6 +15,8 @@ https://github.com/zontreck/zCollar
 
 *** NOTE: Because this file contains sensitive information, the inworld distributed copy will be no modify.
 */
+#include "MasterFile.lsl"
+
 string SERVER = "https://api.zontreck.dev/zni";
 
 list g_lReqs;
@@ -47,81 +49,6 @@ DoNextRequest(){
 }
 
 
-integer TIMEOUT_REGISTER = 30498;
-integer TIMEOUT_FIRED = 30499;
-
-
-list g_lDSRequests;
-key NULL=NULL_KEY;
-UpdateDSRequest(key orig, key new, string meta){
-    if(orig == NULL){
-        g_lDSRequests += [new,meta];
-    }else {
-        integer index = HasDSRequest(orig);
-        if(index==-1)return;
-        else{
-            g_lDSRequests = llListReplaceList(g_lDSRequests, [new,meta], index,index+1);
-        }
-    }
-}
-
-string GetDSMeta(key id){
-    integer index=llListFindList(g_lDSRequests,[id]);
-    if(index==-1){
-        return "N/A";
-    }else{
-        return llList2String(g_lDSRequests,index+1);
-    }
-}
-
-integer HasDSRequest(key ID){
-    return llListFindList(g_lDSRequests, [ID]);
-}
-
-DeleteDSReq(key ID){
-    if(HasDSRequest(ID)!=-1)
-        g_lDSRequests = llDeleteSubList(g_lDSRequests, HasDSRequest(ID), HasDSRequest(ID)+1);
-    else return;
-}
-
-//MESSAGE MAP
-//integer CMD_ZERO = 0;
-integer CMD_OWNER = 500;
-//integer CMD_TRUSTED = 501;
-//integer CMD_GROUP = 502;
-integer CMD_WEARER = 503;
-integer CMD_EVERYONE = 504;
-//integer CMD_RLV_RELAY = 507;
-//integer CMD_SAFEWORD = 510;
-//integer CMD_RELAY_SAFEWORD = 511;
-
-integer NOTIFY = 1002;
-integer NOTIFY_OWNERS = 1003;
-integer REBOOT = -1000;
-
-integer LM_SETTING_SAVE = 2000;//scripts send messages on this channel to have settings saved
-//str must be in form of "token=value"
-integer LM_SETTING_REQUEST = 2001;//when startup, scripts send requests for settings on this channel
-integer LM_SETTING_RESPONSE = 2002;//the settings script sends responses on this channel
-integer LM_SETTING_DELETE = 2003;//delete token from settings
-integer LM_SETTING_EMPTY = 2004;//sent when a token has no value
-integer LM_SETTING_RESET = 2006;
-
-//integer MENUNAME_REQUEST = 3000;
-//integer MENUNAME_RESPONSE = 3001;
-//integer MENUNAME_REMOVE = 3003;
-
-//integer RLV_CMD = 6000;
-//integer RLV_REFRESH = 6001;//RLV plugins should reinstate their restrictions upon receiving this message.
-
-//integer RLV_OFF = 6100; // send to inform plugins that RLV is disabled now, no message or key needed
-//integer RLV_ON = 6101; // send to inform plugins that RLV is enabled now, no message or key needed
-
-integer DIALOG = -9000;
-integer DIALOG_RESPONSE = -9001;
-integer DIALOG_TIMEOUT = -9002;
-//string UPMENU = "BACK";
-//string ALL = "ALL";
 
 Send(string args, string meta){
     SendX("/Collar_Settings.php?"+args, "POST", meta);
@@ -297,7 +224,7 @@ UserCommand(integer iNum, string sStr, key kID) {
     }
 }
 integer AuthCheck(integer iMask){
-    if(iMask == CMD_OWNER || iMask==CMD_WEARER)return TRUE;
+    if(iMask &(C_OWNER|C_WEARER))return TRUE;
     else return FALSE;
 }
 Error(key kID, string sCmd){
@@ -383,7 +310,6 @@ integer g_iStartup=TRUE;
 
 string g_sStack;
 
-integer STARTUP=-57;
 
 integer g_iVerbosity = 1;
 integer CheckModifyPerm(string sSetting, key kStr)
@@ -482,7 +408,7 @@ default
                     else
                         llMessageLinked(LINK_SET, LM_SETTING_RESPONSE, llList2String(lPar,0)+"_"+llList2String(lPar,1)+"="+llList2String(lPar,2), "");
                 } else if(sType == "RESET"){
-                    llMessageLinked(LINK_SET, CMD_OWNER, "reboot --f", "");
+                    llMessageLinked(LINK_SET, COMMAND, "1|>reboot --f", "");
                 } else if(sType == "RANGE_GET"){
                     list meta = llParseString2List(GetDSMeta(kID), [":"],[]);
                     if(llList2String(meta,0)=="all"){
@@ -583,7 +509,7 @@ default
                 if(iErrorLevel > 0){
                     llMessageLinked(LINK_SET, NOTIFY, "1Some settings were not loaded due to the security policy. The wearer has been asked to review the URL and give consent", g_kLoadURLBy);
                     // Ask wearer for consent
-                    Dialog(g_kWearer, "[Settings URL Loader]\n\n"+(string)iErrorLevel+" settings were not loaded from "+g_sLoadURL+".\nReason: Security Policy\n\nLoaded by: secondlife:///app/agent/"+(string)g_kLoadURLBy+"/about\n\nPlease review the url before consenting", ["ACCEPT", "DECLINE"], [], 0, CMD_WEARER, "Consent~LoadURL");
+                    Dialog(g_kWearer, "[Settings URL Loader]\n\n"+(string)iErrorLevel+" settings were not loaded from "+g_sLoadURL+".\nReason: Security Policy\n\nLoaded by: secondlife:///app/agent/"+(string)g_kLoadURLBy+"/about\n\nPlease review the url before consenting", ["ACCEPT", "DECLINE"], [], 0, C_WEARER, "Consent~LoadURL");
                 }
 
                 llMessageLinked(LINK_SET, NOTIFY, "1Settings have been loaded", g_kLoadURLBy);
@@ -626,11 +552,16 @@ default
             Send("type=DELETE&token="+llToLower(llList2String(lPar,0))+"&var="+llToLower(llList2String(lPar,1)), "delete");
         } else if(iNum == LM_SETTING_RESET)
         {
-            if(((integer)sMsg)==CMD_OWNER)
+            if(((integer)sMsg)&C_OWNER)
             {
                 Dialog(kID, "[Database Controller]\n\nAre you sure you want to completely reset the collar memory? This action cannot be undone", ["Yes", "No"],[],0,(integer)sMsg, "resetconsent");
             }else llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to resetting the collar memory", kID);
-        } else if(iNum >= CMD_OWNER && iNum <= CMD_EVERYONE) UserCommand(iNum, sMsg, kID);
+        } else if(iNum ==COMMAND) {
+            list lTmp = llParseString2List(sMsg,["|>"],[]);
+            integer iMask =(integer)llList2String(lTmp,0);
+            string sTask = llList2String(lTmp,1);
+            UserCommand(iMask, sTask, kID);
+        }
         else if(iNum == LM_SETTING_RESPONSE)
         {
             list lPar = llParseString2List(sMsg, ["_", "="],[]);
@@ -661,7 +592,7 @@ default
                     if(sMsg=="No")return;
                     else if(sMsg=="Yes"){
                         g_iRebootConfirmed=TRUE;
-                        llMessageLinked(LINK_SET, iAuth, "reboot", kAv);
+                        llMessageLinked(LINK_SET, COMMAND, (string)iAuth+ "|>reboot", kAv);
                     }
                 } else if(sMenu == "Consent~LoadURL")
                 {

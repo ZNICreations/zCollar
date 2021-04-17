@@ -13,20 +13,8 @@ et al.
 Licensed under the GPLv2. See LICENSE for full details.
 https://github.com/zontreck/zCollar
 */
+#include "MasterFile.lsl"
 
-
-integer DIALOG = -9000;
-integer DIALOG_RESPONSE = -9001;
-integer DIALOG_TIMEOUT = -9002;
-string UPMENU = "BACK";
-
-
-integer LM_SETTING_SAVE = 2000;//scripts send messages on this channel to have settings saved
-//str must be in form of "token=value"
-integer LM_SETTING_REQUEST = 2001;//when startup, scripts send requests for settings on this channel
-integer LM_SETTING_RESPONSE = 2002;//the settings script sends responses on this channel
-integer LM_SETTING_DELETE = 2003;//delete token from settings
-integer LM_SETTING_EMPTY = 2004;//sent when a token has no value
 
 string GetSetting(string sToken) {
     integer i = llListFindList(g_lSettings, [llToLower(sToken)]);
@@ -97,8 +85,6 @@ list SetSetting(string sToken, string sValue) {
 list g_lSettings;
 integer g_iPass=0;
 integer g_iReady;
-integer UPDATER = -99999;
-integer REBOOT=-1000;
 integer SECURE; // The secure channel
 integer UPDATER_CHANNEL = -7483213;
 integer RELAY_CHANNEL = -7483212;
@@ -138,7 +124,7 @@ list g_lPkgs;
 list g_lMenuIDs;
 integer g_iMenuStride;
 
-Prompt(key kAv)
+Prompt(key kAv, integer iPage)
 {
     list lButtons = [];
     integer i=0;
@@ -148,7 +134,7 @@ Prompt(key kAv)
         lButtons += InstallerBox((integer)llList2String(g_lPkgs,i+2), llList2String(g_lPkgs,i+1));
     }
 
-    Dialog(kAv, "What packages would you like to install, or remove?\n\n* Note: Required and deprecated packages cannot be scheduled for uninstallation. If you wish to fully uninstall zCollar, please see the PackageManager in help/about.", lButtons, ["CONFIRM"], 0, 500, "prompt~pkgs");
+    Dialog(kAv, "What packages would you like to install, or remove?\n\n* Note: Required and deprecated packages cannot be scheduled for uninstallation. If you wish to fully uninstall zCollar, please see the PackageManager in help/about.", lButtons, ["CONFIRM"], iPage, 500, "prompt~pkgs");
 }
 
 integer IndexOfBundle(string InstallBox)
@@ -237,7 +223,8 @@ default
                 //list lMenuParams = llParseString2List(sStr, ["|"],[]);
                 key kAv = llList2Key(lMenuParams,0);
                 string sMsg = llList2String(lMenuParams,1);
-                //integer iAuth = llList2Integer(lMenuParams,3);
+                integer iPage = llList2Integer(lMenuParams,2);
+                integer iAuth = llList2Integer(lMenuParams,3);
 
                 integer iRespring=TRUE;
 
@@ -265,7 +252,7 @@ default
                             g_iPass=3;
                         }
                     }
-                    if(iRespring)Prompt(kAv);
+                    if(iRespring)Prompt(kAv, iPage);
                 }
             }
         }
@@ -292,7 +279,7 @@ default
             {
                 g_lPkgs = llParseString2List(llList2String(lCmd,1), ["~"],[]);
 
-                Prompt(llGetOwner());
+                Prompt(llGetOwner(),0);
             } else {
                 //llSay(0, "Unimplemented updater command: "+m);
                 list lOpts = llParseString2List(m,["|"],[]);
