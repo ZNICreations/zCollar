@@ -375,11 +375,11 @@ state active
     }
 
     timer(){
-        if(llGetInventoryType("oc_states")==INVENTORY_NONE)llSetTimerEvent(0); // The state manager is not installed.
-        if(llGetScriptState("oc_states")==FALSE){
-            llResetOtherScript("oc_states");
+        if(llGetInventoryType("zc_states")==INVENTORY_NONE)llSetTimerEvent(0); // The state manager is not installed.
+        if(llGetScriptState("zc_states")==FALSE){
+            llResetOtherScript("zc_states");
             llSleep(0.5);
-            llSetScriptState("oc_states",TRUE);
+            llSetScriptState("zc_states",TRUE);
         }
     }
 
