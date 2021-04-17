@@ -143,6 +143,9 @@ UpdateLists(key kID, key kIssuer){
         }
         if(iMode & ACTION_TRUST){
             if(llListFindList(g_lTrust, [(string)kID])==-1){
+                if(g_iCurrentAuth&C_WEARER && !(g_iCurrentAuth&C_OWNER)){
+                    llMessageLinked(LINK_SET, NOTIFY_OWNERS, SLURL(kID)+" has been added to the trusted list by the collar wearer.", "");
+                }
                 g_lTrust+=kID;
                 llMessageLinked(LINK_SET, NOTIFY, "1"+SLURL(kID)+" has been added to the trusted user list", kIssuer);
                 llMessageLinked(LINK_SET, NOTIFY, "0You are now a trusted user on this collar", kID);
@@ -184,6 +187,9 @@ UpdateLists(key kID, key kIssuer){
         if(iMode&ACTION_TRUST){
             if(llListFindList(g_lTrust, [(string)kID])!=-1){
                 if(kID != g_kWearer || g_iGrantedConsent || kIssuer==g_kWearer){
+                    if(g_iCurrentAuth&C_WEARER && !(g_iCurrentAuth&C_OWNER)){
+                        llMessageLinked(LINK_SET, NOTIFY_OWNERS, SLURL(kID)+" has been removed from the trusted list by the collar wearer.", "");
+                    }
                     integer iPos = llListFindList(g_lTrust, [(string)kID]);
                     g_lTrust = llDeleteSubList(g_lTrust, iPos, iPos);
                     llMessageLinked(LINK_SET, NOTIFY, "1"+SLURL(kID)+" has been removed from the trusted role", kIssuer);
@@ -235,18 +241,20 @@ UserCommand(integer iAuth, string sCmd, key kID){
         RunawayMenu(kID,iAuth);
     }
 
-    if(iAuth & C_OWNER){
-        if(sCmd == "safeword-disable")g_iSafewordDisable=TRUE;
-        else if(sCmd == "safeword-enable")g_iSafewordDisable=FALSE;
+    if(iAuth & (C_OWNER|C_WEARER)){
+        integer not_wearer = FALSE;
+        if(iAuth&C_OWNER)not_wearer=TRUE;
+        if(sCmd == "safeword-disable" && not_wearer)g_iSafewordDisable=TRUE;
+        else if(sCmd == "safeword-enable" && not_wearer)g_iSafewordDisable=FALSE;
 
         list lCmd = llParseString2List(sCmd, [" "],[]);
         string sCmdx = llToLower(llList2String(lCmd,0));
 
-        if(sCmdx == "channel"){
+        if(sCmdx == "channel" && not_wearer){
             g_iChannel = (integer)llList2String(lCmd,1);
             llMessageLinked(LINK_SET, LM_SETTING_SAVE, "global_channel="+(string)g_iChannel, kID);
 
-        } else if(sCmdx == "prefix"){
+        } else if(sCmdx == "prefix" && not_wearer){
             if(llList2String(lCmd,1)==""){
                 llMessageLinked(LINK_SET,NOTIFY,"0The prefix is currently set to: "+g_sPrefix+". If you wish to change it, supply the new prefix to this same command", kID);
                 return;
@@ -263,7 +271,7 @@ UserCommand(integer iAuth, string sCmd, key kID){
             if(sCmdx=="add")
                 g_iMode = ACTION_ADD;
             else g_iMode=ACTION_REM;
-            if(sType == "owner")g_iMode = g_iMode|ACTION_OWNER;
+            if(sType == "owner" && not_wearer)g_iMode = g_iMode|ACTION_OWNER;
             else if(sType == "trust")g_iMode = g_iMode|ACTION_TRUST;
             else if(sType == "block")g_iMode=g_iMode|ACTION_BLOCK;
             else return; // Invalid, don't continue
@@ -275,9 +283,11 @@ UserCommand(integer iAuth, string sCmd, key kID){
                     llSensor("", "", AGENT, 20, PI);
                 } else {
                     list lOpts;
-                    if(sType == "owner")lOpts=g_lOwner;
+                    if(sType == "owner" && not_wearer)lOpts=g_lOwner;
                     else if(sType == "trust")lOpts=g_lTrust;
                     else if(sType == "block")lOpts=g_lBlock;
+                    else return; // deny adding for unknown type
+
 
                     Dialog(kID, "zCollar\n\nRemove "+sType, lOpts, [UPMENU],0,iAuth,"removeUser");
                 }
