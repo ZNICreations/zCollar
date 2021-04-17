@@ -1,6 +1,7 @@
-SCRIPT|zni_themes
 SCRIPT|zc_linkprim_hammer
-SCRIPT|zni_addons
 SCRIPT|oc_states
 SCRIPT|zc_core
 SCRIPT|zc_api
+SCRIPT|zni_settings
+SCRIPT|oc_dialog
+SCRIPT|zni_pkgmgr

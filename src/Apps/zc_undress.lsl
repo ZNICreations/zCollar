@@ -1,14 +1,15 @@
 /*
-This file is a part of OpenCollar.
+This file is a part of zCollar.
 Copyright 2021
 
 : Contributors :
 Aria (Tashia Redrose)
+    * April 2021    -       Rebranded as a zCollar script: zc_undress
     * Sep 2020      -        Began rewrite of oc_undress
 et al.
 
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/OpenCollarTeam/OpenCollar
+https://github.com/zontreck/zCollar
 */
 
 
@@ -107,7 +108,7 @@ integer g_iOutfitLstn=-1;
 key g_kMenuUser;
 integer g_iMenuUser;
 
-list g_lLayers = ["gloves","jacket","pants","shirt","shoes","skirt","socks","underpants","undershirt","skin","eyes","hair","shape", "universal"];
+list g_lLayers = ["gloves","jacket","pants","shirt","shoes","skirt","socks","underpants","undershirt","skin","eyes","hair","shape", "universal", "physics", "tattoo", "alpha"];
 
 //integer g_iBitMask;
 list g_lMasks;
@@ -215,7 +216,7 @@ state active
                         g_kMenuUser = kAv;
                         g_iMenuUser = iAuth;
                         g_iOutfitLstn = llListen(g_iOutfitScan, "", g_kWearer, "");
-                        llOwnerSay("@getoutfit="+(string)g_iOutfitScan);
+                        llOwnerSay("@getoutfitnames="+(string)g_iOutfitScan);
                         iRespring=FALSE;
                     } else if(sMsg == "Clothing Locks"){
                         CLock(kAv,iAuth);
@@ -236,7 +237,7 @@ state active
                         g_iOutfitScan = llRound(llFrand(58439875));
                         llListenRemove(g_iOutfitLstn);
                         g_iOutfitLstn = llListen(g_iOutfitScan, "", g_kWearer, "");
-                        llOwnerSay("@getoutfit="+(string)g_iOutfitScan);
+                        llOwnerSay("@getoutfitnames="+(string)g_iOutfitScan);
                     }
                 } else if(sMenu == "undress~locks"){
                     if(sMsg == UPMENU){
@@ -311,24 +312,16 @@ state active
     listen(integer c,string n,key i,string m){
         if(c == g_iOutfitScan){
             //llWhisper(0, "outfit worn reply: "+m);
-            list iBits = ["gloves","jacket","pants","shirt","shoes","skirt","socks","underpants","undershirt","skin","eyes","hair","shape"];
             llListenRemove(g_iOutfitLstn);
 
             list lButtons;
-            integer iEnd = llStringLength(m);
             list lSystem = ["skin", "eyes", "hair", "shape"];
-            while(iEnd>0){
-                string sBit = llGetSubString(m,0,0);
-                string sLabel = llList2String(iBits,0);
-                iBits = llDeleteSubList(iBits,0,0);
-
-                if(sBit=="1"){
-                    if(llListFindList(lSystem,[sLabel])==-1)
-                        lButtons += sLabel;
-                }
-
-                iEnd--;
-                m = llDeleteSubString(m,0,0);
+            list lPar = llParseString2List(m,[","],[]);
+            integer ix=0;
+            integer xend = llGetListLength(lPar);
+            for(ix=0;ix<xend;ix++)
+            {
+                if(llListFindList(lSystem,[llList2String(lPar,ix)])==-1)lButtons+=llList2String(lPar,ix);
             }
             string sPrompt = "[Undress - Rm. Clothes]\nSelect a layer to remove";
             Dialog(g_kMenuUser, sPrompt,lButtons, [UPMENU],0,g_iMenuUser, "undress~select");
