@@ -547,7 +547,7 @@ state active
                             llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to changing range limit", kAv);
                         }
                     } else if(sMsg == "Runaway"){
-                        llMessageLinked(LINK_SET,0,"menu runaway", kAv);
+                        llMessageLinked(LINK_SET,COMMAND, "|>menu runaway", kAv);
                         iRespring=FALSE;
                     }
 
@@ -558,9 +558,9 @@ state active
                         iRespring=FALSE;
                         Menu(kAv, iAuth);
                     } else if(sMsg == "Print"){
-                        llMessageLinked(LINK_SET, iAuth, "print settings", kAv);
+                        llMessageLinked(LINK_SET, COMMAND, (string)iAuth+"|>print settings", kAv);
                     } else if(sMsg == "Fix Menus"){
-                        llMessageLinked(LINK_SET, iAuth, "fix", kAv);
+                        llMessageLinked(LINK_SET, COMMAND, (string)iAuth+ "|>fix", kAv);
                         llMessageLinked(LINK_SET, NOTIFY, "0Menus have been fixed", kAv);
                     } else if(sMsg == Checkbox(g_iHide,"Hide")){
 
@@ -581,7 +581,7 @@ state active
                     } else if(sMsg == "Resize"){
                         // Resizer!!
                         iRespring=FALSE;
-                        llMessageLinked(LINK_SET, iAuth, "menu Size/Position", kAv);
+                        llMessageLinked(LINK_SET, COMMAND, (string)iAuth+ "|>menu Size/Position", kAv);
                     } else if(sMsg == Checkbox(g_iAllowHide,"AllowHiding")){
                         llMessageLinked(LINK_SET, 0, "allowhide remenu", kAv);
                         iRespring=FALSE;
@@ -636,7 +636,7 @@ state active
                     } else if(sMsg == "Update"){
                         UserCommand(iAuth, "update", kAv);
                     } else {
-                        llMessageLinked(LINK_SET, iAuth, sMsg, kAv);
+                        llMessageLinked(LINK_SET, COMMAND, (string)iAuth+"|>"+ sMsg, kAv);
                         iRespring=FALSE;
                     }
 

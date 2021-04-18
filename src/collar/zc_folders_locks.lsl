@@ -1,10 +1,11 @@
 /*
-This file is a part of OpenCollar.
+This file is a part of zCollar.
 Copyright 2021
 
 : Contributors :
 
 Aria (Tashia Redrose)
+    * April 2021    -           Rebranded as zCollar: zc_folders_locks
     * Feb 2021      -           Create oc_folders_locks
 
 
@@ -12,15 +13,14 @@ et al.
 
 
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/OpenCollarTeam/OpenCollar
+https://github.com/zontreck/zCollar
 */
+
+#include "MasterFile.lsl"
 list g_lFolderLocks;
 
-integer RLV_OFF = 6100;
-integer RLV_ON = 6101;
 
 integer g_iInUpdate=FALSE;
-integer REBOOT=-1000;
 
 IssueLocks()
 {
@@ -29,31 +29,17 @@ IssueLocks()
     for(i=0;i<end;i+=2){
         llMessageLinked(LINK_SET, RLV_CMD, llList2String(g_lFolderLocks,i)+":"+llList2String(g_lFolderLocks,i+1)+"=n", "");
     }
-
+    
     //llSay(0, "FOLDER LOCKS DEBUG RESTRICT\n\n"+llDumpList2String(g_lFolderLocks, " ~ "));
 }
 
-integer RLV_CMD = 6000;
-
-
-integer LM_SETTING_SAVE = 2000;//scripts send messages on this channel to have settings saved to settings store
-//str must be in form of "token=value"
-integer LM_SETTING_REQUEST = 2001;//when startup, scripts send requests for settings on this channel
-integer LM_SETTING_RESPONSE = 2002;//the settings script will send responses on this channel
-integer LM_SETTING_DELETE = 2003;//delete token from store
-integer QUERY_FOLDER_LOCKS = -9100;
-integer REPLY_FOLDER_LOCKS = -9101;
-integer SET_FOLDER_LOCK = -9102;
-integer CLEAR_FOLDER_LOCKS = -9103;
-
-integer UPDATER = -99999;
 default
 {
     state_entry()
     {
-
+        
     }
-
+    
     link_message(integer iSender, integer iNum, string sMsg, key kID)
     {
         if(iNum==RLV_ON)
@@ -118,7 +104,7 @@ default
             string sToken = llList2String(lParam,0);
             string sVar = llList2String(lParam,1);
             string sVal = llList2String(lParam,2);
-
+            
             if(sToken == "folders"){
                 if(sVar=="locks"){
                     llMessageLinked(LINK_SET,LM_SETTING_DELETE, "folders_locks","");

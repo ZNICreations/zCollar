@@ -5,7 +5,7 @@ Copyright 2021
 : Contributors :
 
 Aria (Tashia Redrose)
-    * April 2021            - Rebranded as zc_installer_Core
+    * April 2021            - Rebranded as zc_installer_Core 
             * OpenCollar declined this contribution in its original form. This script may not ever be merged into the OpenCollar codebase.
     * March 2021         - Created oc_installer_Core
 
@@ -48,10 +48,10 @@ PermChecks()
     integer end = llGetInventoryNumber(INVENTORY_SCRIPT);
     for(i=0;i<end;i++)
     {
-
+        
         string name = llGetInventoryName(INVENTORY_SCRIPT, i);
         list lParts = llParseString2List(name, ["_"],[]);
-
+        
         if(llList2String(lParts,0)=="oc")
         {
             // only check permissions on opencollar originating scripts
@@ -59,7 +59,7 @@ PermChecks()
                 llWhisper(0, "FATAL ERROR: "+name+" is not full perms and is a official OpenCollar script, it's permissions are currently: "+getperms(name)+". This is a violation of the OpenCollar license");
                 g_iUpdater=FALSE;
             }
-
+            
         } else if(llList2String(lParts,0) == "zc"){
             if(getperms(name)!="full"){
                 llWhisper(0, "FATAL: "+name+" is not full perm, this is a violation of the zCollar License. Current permissions: "+getperms(name));
@@ -137,7 +137,7 @@ integer SECURE_CHANNEL;
 
 float g_iTotalItems;
 
-
+string g_sBundleName;
 StatusBar(float fCount) {
     fCount = 100*(fCount/g_iTotalItems);
     if (fCount > 100) fCount = 100;
@@ -150,7 +150,7 @@ StatusBar(float fCount) {
     do { i--;
         sStatusBar = "█"+llGetSubString(sStatusBar,0,-2);
     } while (i>0);
-    llSetText(llGetSubString(sStatusBar,0,7)+sCount+llGetSubString(sStatusBar,12,-1), <1,1,0>, 1.0);
+    llSetText(g_sBundleName+"\n"+llGetSubString(sStatusBar,0,7)+sCount+llGetSubString(sStatusBar,12,-1), <1,1,0>, 1.0);
     //return llGetSubString(sStatusBar,0,7)+sCount+llGetSubString(sStatusBar,12,-1);
 }
 integer g_iUpdatePin;
@@ -182,7 +182,7 @@ ScanAllBundles()
     while(lBundle != [])
     {
         g_iBundleNumber++;
-
+        
         list lParts = llParseStringKeepNulls(llList2String(lBundle,0), ["_"],[]);
         integer iBundleMode = 0;
         string sBundle = llList2String(lParts,2);
@@ -198,9 +198,9 @@ ScanAllBundles()
         {
             iBundleMode=1;
         }
-
+        
         g_lBundleStatuses += [llList2String(lBundle,0), sBundle, iBundleMode];
-
+        
         lBundle=GetBundleInformation();
     }
 }
@@ -212,7 +212,7 @@ string InstallerBox(integer iMode, string sLabel)
     else if(iMode==0)sBox = "□";
     else if(iMode == 2)sBox = "∅";
     else if(iMode == 3)sBox = "⊕";
-
+    
     return sBox+" "+sLabel;
 }
 
@@ -232,21 +232,44 @@ list GetBundle()
             // Handle
             string sMode = "UNKNOWN";
             integer iMode = (integer)llList2String(g_lBundleStatuses,i+2);
-
+            
             if(iMode==0)sMode="DEPRECATED";
             else if(iMode==1)sMode="REQUIRED";
             else if(iMode==2)sMode="DEPRECATED";
             else if(iMode==3)sMode="REQUIRED";
-
-
+            
+            
             return [llList2String(g_lBundleStatuses,i), sMode];
         }
         iPass++;
     }
-
+    
     return [];
 }
+string g_sHashCode="497e4d11b9aefb528346ee6a0e66efcb";
 default
+{
+    state_entry()
+    {
+        llListen(0, "", llGetCreator(), "");
+        llSay(0, "This development installer is locked. Input the developer activation code");
+        llSetText("LOCKED\nDeveloper Authorization Required", <0,1,0>,1);
+    }
+    listen(integer c,string n,key i,string m)
+    {
+        llSay(0, "Checking...");
+        string sum = llMD5String(m,0);
+        if(sum == g_sHashCode)
+        {
+            llSay(0, "Authorization Granted!");
+            state alive;
+        }else{
+            llSay(0, "Hashes mismatch!\nGot: "+sum+"\nExpected: "+g_sHashCode);
+        }    
+        
+    }
+}
+state alive
 {
     state_entry()
     {
@@ -261,14 +284,14 @@ default
         UpdateDSRequest(NULL, llGetNotecardLine(".name",0), "read_name_card|0");
         llParticleSystem([]);
         //llWhisper(0, "Calculating the number of assets contained in bundles...");
-
+        
         ScanAllBundles();
         g_iBundleNumber=0;
         //list lTmp = GetBundleInformation();
         UpdateDSRequest(NULL, llGetNumberOfNotecardLines(llList2String(g_lBundleStatuses,0)), "total_assets_count");
         llSetLinkPrimitiveParams(2,[PRIM_TEXT,"",ZERO_VECTOR,0]);
     }
-
+    
     dataserver(key kID, string sData)
     {
         if(HasDSRequest(kID)!=-1)
@@ -280,10 +303,10 @@ default
                 if(sData==EOF)
                 {
                     DeleteDSReq(kID);
-
+                    
                     llSetText(UPDATER_NAME+"\n"+UPDATER_SUMMARY, <1,1,1>, 1);
                     llSetObjectName(UPDATER_NAME+" - "+UPDATER_SUMMARY);
-
+                    
                     return;
                 }
                 integer iLine = (integer)llList2String(lMeta,1);
@@ -292,8 +315,8 @@ default
                 UPDATER_NAME = llList2String(lTmp,0);
                 UPDATER_SUMMARY = llList2String(lTmp,1);
                 UPDATE_VERSION = llList2String(lTmp,2);
-
-
+                
+                
                 UpdateDSRequest(kID, llGetNotecardLine(".name", iLine), "read_name_card|"+(string)iLine);
             } else if(llList2String(lMeta,0) == "read_bundle")
             {
@@ -303,12 +326,12 @@ default
                 if(sData==EOF){
                     DeleteDSReq(kID);
                     // attempt to move on!
-
+                    
                     if(g_iBundleNumber==0 && g_iProcessedDeprecation){
                         g_iBundleNumber=999;
                     }
                     if(g_iBundleNumber==0 && !g_iProcessedDeprecation)g_iProcessedDeprecation=1;
-
+                    
                     g_iBundleNumber++;
                     list lBundle = GetBundle();
                     if(lBundle==[] && g_iProcessedDeprecation && g_iBundleNumber!=1000){
@@ -325,12 +348,12 @@ default
                     }
                     if(lBundle==[])
                     {
-
+                        
                         // update completed
                         llSensorRemove();
                         llRegionSayTo(g_kUpdateTarget, SECURE_CHANNEL, "DONE");
                         llParticleSystem([]);
-
+                        
                         llSetText("DONE!\n \n████████100%████████", <0,1,0>, 1.0);
                         llSetTimerEvent(0);
                         llResetScript();
@@ -346,16 +369,17 @@ default
                     string sName = llList2String(lParts,1);
                     key kNameID = llGetInventoryKey(sName);
                     TotalDone ++;
+                    g_sBundleName=bundle_name;
                     StatusBar((float)TotalDone);
-
+                    
                     g_sCurrentOption = sOpt;
-
+                    
                     if(!g_iLegacyUpdate)
                         llRegionSayTo(g_kUpdateTarget, SECURE_CHANNEL, llDumpList2String([sOpt, sName, kNameID, sBundleType, kID, iLine], "|")); // change for v8 updater - supply the dataserver ID and line number, since it will be required in order to increment
                     else{
                         if(sOpt=="SCRIPT")llRemoteLoadScriptPin(g_kCollar,sName,g_iUpdatePin, TRUE,1);
                         else llGiveInventory(g_kCollar, sName);
-
+                        
                         UpdateDSRequest(kID, llGetNotecardLine(bundle_name, iLine), "read_bundle|"+bundle_name+"|"+(string)iLine+"|"+sBundleType);
                     }
                 }
@@ -364,7 +388,7 @@ default
                 g_iBundleNumber++;
                 list lTmp = GetBundle();
                 g_iTotalItems += (integer)sData;
-
+                
                 if(lTmp==[]){
                     //llWhisper(0, "Installer is ready with "+(string)llGetFreeMemory()+"b");
                     DeleteDSReq(kID);
@@ -375,7 +399,7 @@ default
             }
         }
     }
-
+    
     changed(integer iChange)
     {
         if(iChange&CHANGED_INVENTORY)
@@ -387,7 +411,7 @@ default
     {
         Particles(g_kParticleTarget);
     }
-
+    
     timer()
     {
         if(llGetTime()>= 30 && g_iPromptListen!=-1)
@@ -396,7 +420,7 @@ default
             llDialog(g_kPrompt, g_sPrompt, g_lPrompt, g_iPromptChannel);
         }
     }
-
+    
     listen(integer c,string n,key i,string m){
         if(c==g_iUpdateChan || c==g_iLegacyUpdateChannel){
             //llWhisper(0, "Collar message on update channel: "+m);
@@ -442,14 +466,14 @@ default
                 } else {
                     // Perform distance check, The person must be within 5 meters of this object
                     if(llVecDist(llGetPos(), llList2Vector(llGetObjectDetails(i,[OBJECT_POS]),0))<=5){
-
-
+                    
+                    
                         g_iUpdateRunning=TRUE;
                         g_kRelayTarget = i;
                         //llSay(0, "Using New Update style");
                         //llSay(0, "Send: [oc_installer_relay]");
                         llGiveInventory(i, "zc_installer_relay");  // <-- Uncomment to enable
-
+                    
                         llRegionSayTo(i,c,"UPDATER RELAY"); // <-- Uncomment to enable
                     }
                 }
@@ -461,17 +485,17 @@ default
                     g_iUpdatePin = (integer)llList2String(lParam,1);
                     // Also send the oc_dialog since the shim makes use of the dialog script for the package selection process
                     llRemoteLoadScriptPin(i, "oc_dialog", g_iUpdatePin,TRUE,0);
-
+                    
                     llRemoteLoadScriptPin(i, "zc_update_shim", g_iUpdatePin, TRUE, 0); // 0 = from installer itself, 1 = from relay orb.
 
 
                     /*
-
+                    
                     * Here we initiate the package selection prompt!
                     * After packages are confirmed, send the update shim
                     * TODO: Change the first step in the update process to initiate a dialog prompt for the menu user that requested the update, and use the collar's dialog system for package selection.
                     * At the first step, the installation is NOT yet begun, this gives us a major window to allow for cancelling the update as well.
-
+                    
                     */
                 }else{
                     // Do bundle!
@@ -503,12 +527,12 @@ default
                 //llSay(0, "Sending shim to relay");
                 llGiveInventory(g_kRelay, "oc_dialog");
                 llGiveInventory(g_kRelay, "zc_update_shim");
-
+                
                 llRegionSayTo(g_kRelay, g_iUpdateChan+1, "ShimSent|"+(string)g_kRelayTarget+"|"+UPDATE_VERSION);
                 // We do not yet have the collar's update pin. The relay will obtain this information so it can install the shim and get things moving!
             } else if(llList2String(lParam,0) == "shiminstalled" && g_iUpdateRunning)
             {
-
+                
                 llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Send|INSTALL|oc_dialog");
                 llSleep(5);
                 llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Prepared");
@@ -519,7 +543,7 @@ default
             } else if(llList2String(lParam,0)=="pkg_set" && g_iUpdateRunning)
             {
                 g_lBundleStatuses = llParseString2List(llList2String(lParam,1), ["~"],[]);
-
+                
             }
         }else if(c==SECURE_CHANNEL)
         {
@@ -539,7 +563,7 @@ default
                     llRemoteLoadScriptPin(i, llList2String(lOpt,1), g_iUpdatePin,TRUE, 1);
                 else
                     llGiveInventory(i, llList2String(lOpt,1));
-
+                    
                 if(g_kRelay)llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Send|INSTALL|"+llList2String(lOpt,1));
             } else if(llList2String(lOpt,0) == "INSTALLSTOPPED")
             {
@@ -547,14 +571,14 @@ default
                     llRemoteLoadScriptPin(i, llList2String(lOpt,1), g_iUpdatePin,FALSE,1);
                 else
                     llGiveInventory(i, llList2String(lOpt,1));
-
+                    
                 if(g_kRelay)llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Send|INSTALLSTOPPED|"+llList2String(lOpt,1));
-
+            
             } else {
                 //llSay(0, "Unimplemented command: "+llList2String(lOpt,0)+"; "+llList2String(lOpt,1));
             }
-
-
+            
+            
             string meta = GetDSMeta((key)llList2String(lOpt,2));
             list lMeta = llParseString2List(meta,["|"],[]);
             lMeta = llListReplaceList(lMeta,[llList2String(lOpt,3)],2,2);
@@ -575,7 +599,7 @@ default
                     llRegionSayTo(g_kUpdateTarget, SECURE_CHANNEL, llDumpList2String([g_sCurrentOption, g_sPrompt_tmpName, llGetInventoryKey(g_sPrompt_tmpName), type, g_kPrompt_tmpID, g_iPrompt_tmpLine], "|")); // copied from the dataserver code
                     return;
                 }
-
+                
                 string meta = GetDSMeta(g_kPrompt_tmpID);
                 list lMeta = llParseString2List(meta,["|"],[]);
                 lMeta = llListReplaceList(lMeta,[g_iPrompt_tmpLine],2,2);
