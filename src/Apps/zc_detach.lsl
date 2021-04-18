@@ -1,4 +1,4 @@
-
+  
 /*
 This file is a part of OpenCollar.
 Copyright ©2021
@@ -7,8 +7,8 @@ Copyright ©2021
 
 Aria (Tashia Redrose)
     * Dec 2019      - Rewrote Outfits & Reset Script Version to 1.0
-
-
+    
+    
 et al.
 
 Licensed under the GPLv2. See LICENSE for full details.
@@ -45,27 +45,25 @@ Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPa
 
 Menu(key kID, integer iAuth) {
     string sPrompt = "\n[Detach App]";
-
+    
     Dialog(kID, sPrompt, llGetAttachedList(llGetOwner()),  [UPMENU], 0, iAuth, "Menu~Main");
 }
 
 UserCommand(integer iNum, string sStr, key kID) {
     if (llSubStringIndex(sStr,llToLower(g_sSubMenu)) && sStr != "menu "+g_sSubMenu) return;
-
+    
     if (sStr==g_sSubMenu || sStr == "menu "+g_sSubMenu) Menu(kID, iNum);
     //else if (iNum!=CMD_OWNER && iNum!=CMD_TRUSTED && kID!=g_kWearer) RelayNotify(kID,"Access denied!",0);
     else {
-        integer iWSuccess = 0;
+        integer iWSuccess = 0; 
         string sChangetype = llList2String(llParseString2List(sStr, [" "], []),0);
         string sChangevalue = llList2String(llParseString2List(sStr, [" "], []),1);
         string sText;
-
+        
     }
 }
 
 key g_kWearer;
-list g_lMenuIDs;
-integer g_iMenuStride;
 integer g_iLocked=FALSE;
 default
 {
@@ -103,7 +101,7 @@ state active
 /*    timer(){
         llSetText("Free Memory (oc_detach)\n"+(string)llGetFreeMemory()+"\n \n \n \n \n \n \n \n \n \n \n \n", <0,1,1>,1);
     }
-*/
+*/    
     link_message(integer iSender,integer iNum,string sStr,key kID){
         if(iNum ==COMMAND) {
             list lTmp = llParseString2List(sStr,["|>"],[]);
@@ -122,9 +120,9 @@ state active
                 key kAv = llList2Key(lMenuParams,0);
                 string sMsg = llList2String(lMenuParams,1);
                 integer iAuth = llList2Integer(lMenuParams,3);
-
+                
                 if(sMenu == "Menu~Main"){
-                    if(sMsg == UPMENU) llMessageLinked(LINK_SET, iAuth, "menu "+g_sParentMenu, kAv);
+                    if(sMsg == UPMENU) llMessageLinked(LINK_SET, CMD_ZERO, "menu "+g_sParentMenu, kAv);
                     else{
                         // remove attachment
                         llOwnerSay("@remattach:"+sMsg+"=force");

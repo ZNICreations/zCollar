@@ -513,7 +513,7 @@ state active
                             llMessageLinked(LINK_SET, COMMAND, (string)iAuth+"|>rem "+llToLower(llGetSubString(sMsg,2,-1)), kAv);
                         } else llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to removing a person", kAv);
                     } else if(sMsg == "Access List"){
-                        llMessageLinked(LINK_SET, iAuth, "print auth", kAv);
+                        llMessageLinked(LINK_SET, CMD_ZERO, "print auth", kAv);
                     } else if(sMsg == Checkbox(bool((g_kGroup!="")), "Group")){
                         if(iAuth &(C_OWNER|C_TRUSTED)){
                             if(g_kGroup!=""){
@@ -736,7 +736,7 @@ state active
 
             if(sStr == "settings=sent"){
                 if(g_kGroup==(string)NULL_KEY)g_kGroup="";
-
+                
                 if(!g_iLocked)llOwnerSay("@detach=y");
             }
         } else if(iNum == LM_SETTING_DELETE){
@@ -883,7 +883,7 @@ state active
                         // this updater is older, dont install it
                         //llSay(0, "Current version is newer or the same as the updater. Trigger update a second time to confirm you want to actually do this");
                         g_iDoTriggerUpdate=TRUE;
-
+                        
                         g_iWaitUpdate=FALSE;
                         g_kUpdater=kID;
                         g_iDiscoveredUpdaters++;
@@ -905,7 +905,7 @@ state active
                 if((UPDATE_AVAILABLE && !g_iAmNewer) || g_iDoTriggerUpdate){
                     // valid update
                     g_iDiscoveredUpdaters++;
-                    g_kUpdater = kID;
+                    g_kUpdater = kID; 
                 } else {
                     // this updater is older, dont install it
                     //llSay(0, "Current version is newer or the same as the updater. Trigger update a second time to confirm you want to actually do this");

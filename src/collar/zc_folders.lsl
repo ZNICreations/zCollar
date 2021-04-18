@@ -462,7 +462,7 @@ state active
                     } else if(sMsg == UPMENU){
                         iRespring=FALSE;
 
-                        llMessageLinked(LINK_SET, iAuth, "menu "+g_sParentMenu, kAv);
+                        llMessageLinked(LINK_SET, CMD_ZERO, "menu "+g_sParentMenu, kAv);
                     }
 
 
