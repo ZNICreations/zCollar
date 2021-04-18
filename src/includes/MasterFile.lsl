@@ -19,10 +19,17 @@ integer NOTIFY_OWNERS=1003;
 
 integer RLV_CMD = 6000;
 integer RLV_REFRESH = 6001;//RLV plugins should reinstate their restrictions upon receiving this message.
+integer DO_RLV_REFRESH = 26001;//RLV plugins should reinstate their restrictions upon receiving this message.
+integer RLV_CLEAR = 6002;//RLV plugins should clear their restriction lists upon receiving this message.
+integer RLV_VERSION = 6003; //RLV Plugins can recieve the used RLV viewer version upon receiving this message..
+integer RLVA_VERSION = 6004; //RLV Plugins can recieve the used RLVa viewer version upon receiving this message..
 
-integer RLV_OFF = 6100; // send to inform plugins that RLV is disabled now, no message or key needed
-integer RLV_ON = 6101; // send to inform plugins that RLV is enabled now, no message or key needed
-//MESSAGE MAP
+integer RLV_OFF = 6100;
+integer RLV_ON = 6101;
+integer RLV_QUERY = 6102;
+integer RLV_RESPONSE = 6103;
+
+
 integer AUTH_REQUEST = 600;
 integer AUTH_REPLY=601;
 

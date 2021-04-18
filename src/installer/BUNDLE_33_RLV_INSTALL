@@ -1,4 +1,4 @@
 SCRIPT|oc_relay
-SCRIPT|oc_rlvsys
+SCRIPT|zc_rlvsys
 SCRIPT|oc_rlvextension
 SCRIPT|oc_rlvsuite

@@ -172,8 +172,6 @@ ThemeSelect(key kAv, integer iAuth){
     Dialog(kAv, "[Theme App]\n\nSelect the theme below that you want to apply", g_lThemes, [UPMENU], 0, iAuth, "Menu~Theme");
 }
 key g_kWearer;
-list g_lMenuIDs;
-integer g_iMenuStride;
 list g_lOwner;
 list g_lTrust;
 list g_lBlock;
@@ -474,7 +472,7 @@ state active
                 if(sMenu == "Menu~Main"){
                     if(sMsg == UPMENU) {
                         iRespring=FALSE;
-                        llMessageLinked(LINK_SET, iAuth, "menu "+g_sParentMenu, kAv);
+                        llMessageLinked(LINK_SET, CMD_ZERO, "menu "+g_sParentMenu, kAv);
                     } else if(sMsg == "New Theme"){
                         PrintCurrentProperties(kAv);
                     } else if(sMsg == "Apply Theme"){

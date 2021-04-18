@@ -3,6 +3,8 @@
 // Medea Destiny, littlemousy, Romka Swallowtail, Garvin Twine,
 // Sumi Perl et al.
 // Licensed under the GPLv2.  See LICENSE for full details.
+#include "MasterFile.lsl"
+
 
 string g_sScriptVersion = "8.0";
 integer g_iRLVOn = TRUE;
@@ -23,63 +25,14 @@ string g_sParentMenu = "Main";
 string g_sSubMenu = "RLV";
 list g_lMenu;
 //key kMenuID;
-list    g_lMenuIDs;
-integer g_iMenuStride = 3;
 integer RELAY_CHANNEL = -1812221819;
 
-//MESSAGE MAP
-integer LINK_CMD_DEBUG=1999;
-//integer CMD_ZERO = 0;
-integer CMD_OWNER = 500;
-//integer CMD_TRUSTED = 501;
-//integer CMD_GROUP = 502;
-integer CMD_WEARER = 503;
-integer CMD_EVERYONE = 504;
-integer CMD_RLV_RELAY = 507;
-integer CMD_SAFEWORD = 510;
-integer CMD_RELAY_SAFEWORD = 511;
-//integer CMD_BLOCKED = 520;
 
-//integer POPUP_HELP = 1001;
-integer NOTIFY = 1002;
-integer REBOOT = -1000;
-//integer LOADPIN = -1904;
-integer LM_SETTING_SAVE = 2000;
-integer LM_SETTING_REQUEST = 2001;
-integer LM_SETTING_RESPONSE = 2002;
-integer LM_SETTING_DELETE = 2003;
-integer LM_SETTING_EMPTY = 2004;
-
-integer MENUNAME_REQUEST = 3000;
-integer MENUNAME_RESPONSE = 3001;
-integer MENUNAME_REMOVE = 3003;
-
-integer RLV_CMD = 6000;
-integer RLV_REFRESH = 6001;//RLV plugins should reinstate their restrictions upon receiving this message.
-integer DO_RLV_REFRESH = 26001;//RLV plugins should reinstate their restrictions upon receiving this message.
-integer RLV_CLEAR = 6002;//RLV plugins should clear their restriction lists upon receiving this message.
-integer RLV_VERSION = 6003; //RLV Plugins can recieve the used RLV viewer version upon receiving this message..
-integer RLVA_VERSION = 6004; //RLV Plugins can recieve the used RLVa viewer version upon receiving this message..
-
-integer RLV_OFF = 6100;
-integer RLV_ON = 6101;
-integer RLV_QUERY = 6102;
-integer RLV_RESPONSE = 6103;
-
-integer DIALOG = -9000;
-integer DIALOG_RESPONSE = -9001;
-integer DIALOG_TIMEOUT = -9002;
-
-string UPMENU = "BACK";
 string TURNON = "  ON";
 string TURNOFF = " OFF";
 string CLEAR = "CLEAR ALL";
 
 key g_kWearer;
-//integer TIMEOUT_READY = 30497;
-integer TIMEOUT_REGISTER = 30498;
-integer TIMEOUT_FIRED = 30499;
-//list g_lSettingsReqs = [];
 
 
 string g_sSettingToken = "rlvsys_";
@@ -298,7 +251,7 @@ UserCommand(integer iNum, string sStr, key kID) {
         g_iRLVOff = FALSE;
         setRlvState();
     } else if (sStr == "rlv off") {
-        if (iNum == CMD_OWNER) {
+        if (iNum & C_OWNER) {
             llMessageLinked(LINK_SET, LM_SETTING_SAVE, g_sSettingToken + "on=0", "");
             llSetTimerEvent(0.0); //in case handshakes still going on stop the timer
             g_iRLVOn = FALSE;
@@ -307,10 +260,10 @@ UserCommand(integer iNum, string sStr, key kID) {
             llMessageLinked(LINK_SET,NOTIFY,"0"+"RLV disabled.",g_kWearer);
         } else llMessageLinked(LINK_SET,NOTIFY,"0"+"%NOACCESS% to changing rlv",kID);
     } else if (sStr == "clear") {
-        if (iNum == CMD_OWNER) SafeWord(kID);
+        if (iNum & C_OWNER) SafeWord(kID);
         else llMessageLinked(LINK_SET,NOTIFY,"1"+"%NOACCESS% to clearing RLV",kID);
     } else if (llGetSubString(sStr,0,13) == "rlv handshakes") {
-        if (iNum != CMD_WEARER && iNum != CMD_OWNER) llMessageLinked(LINK_SET,NOTIFY,"0"+"%NOACCESS% to changing handshake count",kID);
+        if (!(iNum & (C_WEARER|C_OWNER))) llMessageLinked(LINK_SET,NOTIFY,"0"+"%NOACCESS% to changing handshake count",kID);
         else {
             if ((integer)llGetSubString(sStr,-2,-1)) {
                 g_iMaxViewerChecks = (integer)llGetSubString(sStr,-2,-1);
@@ -333,15 +286,7 @@ UserCommand(integer iNum, string sStr, key kID) {
         llMessageLinked(LINK_SET,NOTIFY,"0"+sOut,kID);
     }
 }
-/*ExtractPart(){
-    g_sScriptPart = llList2String(llParseString2List(llGetScriptName(), ["_"],[]),1);
-}*/
 
-//string g_sScriptPart; // oc_<part>
-
-integer ALIVE = -55;
-integer READY = -56;
-integer STARTUP = -57;
 default
 {
     on_rez(integer iNum){
@@ -436,7 +381,12 @@ state active
             g_lMenu = [] ; // flush submenu buttons
             llMessageLinked(LINK_SET, MENUNAME_REQUEST, g_sSubMenu, "");
         }
-        else if (iNum <= CMD_EVERYONE && iNum >= CMD_OWNER) UserCommand(iNum, sStr, kID);
+        else if (iNum == COMMAND) {
+            list lTmp = llParseString2List(sStr,["|>"],[]);
+            integer iMask = llList2Integer(lTmp,0);
+            string sCmd = llList2String(lTmp,1);
+            UserCommand(iMask, sCmd, kID);
+        }
         else if (iNum == DIALOG_RESPONSE) {
             //Debug(sStr);
             integer iMenuIndex = llListFindList(g_lMenuIDs, [kID]);
@@ -460,9 +410,9 @@ state active
                         UserCommand(iAuth, "clear", kAv);
                         DoMenu(kAv, iAuth);
                     } else if (sMsg == UPMENU) {
-                        llMessageLinked(LINK_SET, iAuth, "menu "+g_sParentMenu, kAv);
+                        llMessageLinked(LINK_SET, CMD_ZERO, "menu "+g_sParentMenu, kAv);
                     } else if (~llListFindList(g_lMenu, [sMsg])) {  //if this is a valid request for a foreign menu
-                        llMessageLinked(LINK_SET, iAuth, "menu " + sMsg, kAv);
+                        llMessageLinked(LINK_SET, CMD_ZERO, "menu " + sMsg, kAv);
                     }
                 }
             }
@@ -483,17 +433,6 @@ state active
                     llOwnerSay("@detach=y");
                 }
             }
-        
-        }else if(iNum == LM_SETTING_EMPTY){
-            
-            //integer ind = llListFindList(g_lSettingsReqs, [sStr]);
-            //if(ind!=-1)g_lSettingsReqs = llDeleteSubList(g_lSettingsReqs, ind,ind);
-            
-        } else if(iNum == LM_SETTING_DELETE){
-            
-            //integer ind = llListFindList(g_lSettingsReqs, [sStr]);
-            //if(ind!=-1)g_lSettingsReqs = llDeleteSubList(g_lSettingsReqs, ind,ind);
-            
         } else if (iNum == LM_SETTING_RESPONSE) {
             list lParams = llParseString2List(sStr, ["_","="], []);
             string sToken = llList2String(lParams, 0);
@@ -543,7 +482,7 @@ state active
                 }
             }
         }
-        else if (iNum == REBOOT && sStr == "reboot") llResetScript();
+        else if (iNum == REBOOT) llResetScript();
         else if (g_iRlvActive) {
             if (iNum == RLV_CMD) {
                 //Debug("Received RLV_CMD: "+sStr+" from "+(string)kID);
@@ -621,16 +560,6 @@ state active
                 llMessageLinked(LINK_SET, RLV_REFRESH, "","");
                 llMessageLinked(LINK_SET, LM_SETTING_REQUEST, "ALL","");
             } 
-        }
-
-        if(iNum == LINK_CMD_DEBUG){
-            integer onlyver=0;
-            if(sStr == "ver")onlyver=1;
-            llInstantMessage(kID, llGetScriptName() +" SCRIPT VERSION: "+g_sScriptVersion);
-            if(onlyver)return; // basically this command was: <prefix> versions
-            // The rest of this command can be access by <prefix> debug
-            llInstantMessage(kID, llGetScriptName() +" FREE MEMORY: "+(string)llGetFreeMemory()+" bytes");
-            llInstantMessage(kID, llGetScriptName()+" RLV_ON: "+(string)g_iRLVOn);
         }
         
     }

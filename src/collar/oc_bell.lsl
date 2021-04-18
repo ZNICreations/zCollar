@@ -1,4 +1,4 @@
-// This file is part of OpenCollar.
+// This file is part of zCollar.
 // Copyright (c) 2009 - 2016 Cleo Collins, Nandana Singh, Satomi Ahn,   
 // Joy Stipe, Wendy Starfall, Medea Destiny, littlemousy,         
 // Romka Swallowtail, Garvin Twine et al.  
@@ -8,8 +8,9 @@
 //scans for sounds starting with: bell_
 //show/hide for elements named: Bell
 //2009-01-30 Cleo Collins - 1. draft
+#include "MasterFile.lsl"
 
-string g_sScriptVersion = "8.0";
+string g_sScriptVersion = "10.0";
 integer LINK_CMD_DEBUG=1999;
 DebugOutput(key kID, list ITEMS){
     integer i=0;
@@ -20,20 +21,11 @@ DebugOutput(key kID, list ITEMS){
     }
     llInstantMessage(kID, llGetScriptName() +final);
 }
-string g_sAppVersion = "1.2";
-
-/*
-integer TIMEOUT_READY = 30497;
-integer TIMEOUT_REGISTER = 30498;
-integer TIMEOUT_FIRED = 30499;
-*/
-
+string g_sAppVersion = "1.3";
 
 
 string g_sSubMenu = "Bell";
 string g_sParentMenu = "Apps";
-list g_lMenuIDs;  //three strided list of avkey, dialogid, and menuname
-integer g_iMenuStride = 3;
 
 float g_fVolume=0.5; // volume of the bell
 float g_fVolumeStep=0.1; // stepping for volume
@@ -67,37 +59,6 @@ integer g_iHasControl=FALSE; // dow we have control over the keyboard?
 
 integer g_iHide=1 ; // global hide. Default is visible, but the bell script inverts this value.
 
-//MESSAGE MAP
-//integer CMD_ZERO = 0;
-integer CMD_OWNER = 500;
-//integer CMD_TRUSTED = 501;
-integer CMD_GROUP = 502;
-//integer CMD_WEARER = 503;
-integer CMD_EVERYONE = 504;
-//integer CMD_RLV_RELAY = 507;
-//integer CMD_SAFEWORD = 510;
-//integer CMD_BLOCKED = 520;
-
-integer NOTIFY = 1002;
-//integer NOTIFY_OWNERS = 1003;
-integer SAY = 1004;
-
-integer REBOOT = -1000;
-integer LM_SETTING_SAVE = 2000;
-//integer LM_SETTING_REQUEST = 2001;
-integer LM_SETTING_RESPONSE = 2002;
-//integer LM_SETTING_DELETE = 2003;
-//integer LM_SETTING_EMPTY = 2004;
-
-integer MENUNAME_REQUEST = 3000;
-integer MENUNAME_RESPONSE = 3001;
-integer MENUNAME_REMOVE = 3003;
-
-integer DIALOG = -9000;
-integer DIALOG_RESPONSE = -9001;
-integer DIALOG_TIMEOUT = -9002;
-
-string UPMENU = "BACK";
 integer g_iHasBellPrims;
 //string g_sGlobalToken = "global_";
 /*
@@ -220,6 +181,12 @@ PrepareSounds() {
 
 UserCommand(integer iNum, string sStr, key kID) { // here iNum: auth value, sStr: user command, kID: avatar id
    // Debug("command: "+sStr);
+   if(iNum&C_OWNER && sStr == "runaway"){
+       
+        llSleep(4);
+        SetBellElementAlpha();
+        return;
+    }
     sStr = llToLower(sStr);
     if (sStr == "menu bell" || sStr == "bell" || sStr == g_sSubMenu)
         BellMenu(kID, iNum);
@@ -246,7 +213,7 @@ UserCommand(integer iNum, string sStr, key kID) { // here iNum: auth value, sStr
             SetBellElementAlpha();
             llMessageLinked(LINK_SET, LM_SETTING_SAVE, "bell_show=" + (string)g_iBellShow, "");
         } else if (sToken=="on") {
-            if (iNum!=CMD_GROUP) {
+            if (!(iNum&C_GROUP)) {
                 if (g_iBellOn==0) {
                     g_iBellOn=iNum;
                     if (!g_iHasControl) llRequestPermissions(g_kWearer,PERMISSION_TAKE_CONTROLS);
@@ -255,7 +222,7 @@ UserCommand(integer iNum, string sStr, key kID) { // here iNum: auth value, sStr
                 }
             } else llMessageLinked(LINK_SET,NOTIFY,"0"+"%NOACCESS% to bell",kID);
         } else if (sToken=="off") {
-            if ((g_iBellOn>0)&&(iNum!=CMD_GROUP)) {
+            if ((g_iBellOn>0)&&!(iNum&C_GROUP)) {
                 g_iBellOn=0;
                 if (g_iHasControl) {
                     llReleaseControls();
@@ -275,16 +242,10 @@ UserCommand(integer iNum, string sStr, key kID) { // here iNum: auth value, sStr
             g_fNextRing=llGetTime()+1.0;
             llPlaySound(g_kCurrentBellSound,g_fVolume);
         }
-    } else if (sStr == "rm bell") {
-        if (kID!=g_kWearer && iNum!=CMD_OWNER) llMessageLinked(LINK_SET,NOTIFY,"0"+"%NOACCESS% to remove bell",kID);
-        else  Dialog(kID,"\nDo you really want to uninstall the "+g_sSubMenu+" App?", ["Yes","No","Cancel"], [], 0, iNum,"rmbell");
     }
     //Debug("command executed");
 }
 
-integer ALIVE = -55;
-integer READY = -56;
-integer STARTUP = -57;
 default
 {
     on_rez(integer iNum){
@@ -326,8 +287,12 @@ state active
     link_message(integer iSender, integer iNum, string sStr, key kID) {
         if (iNum == MENUNAME_REQUEST && sStr == g_sParentMenu)
             llMessageLinked(iSender, MENUNAME_RESPONSE, g_sParentMenu + "|" + g_sSubMenu, "");
-        else if (iNum >= CMD_OWNER && iNum <= CMD_EVERYONE)
-            UserCommand(iNum, sStr, kID);
+        else if (iNum == COMMAND){
+            list lTmp = llParseString2List(sStr,["|>"],[]);
+            integer iMask = llList2Integer(lTmp,0);
+            string sCmd = llList2String(lTmp,1);
+            UserCommand(iMask, sCmd, kID);
+        }
         else if (iNum == DIALOG_RESPONSE) {
             integer iMenuIndex = llListFindList(g_lMenuIDs, [kID]);
             if (~iMenuIndex) {
@@ -339,7 +304,7 @@ state active
                 // integer iPage = (integer)llList2String(lMenuParams, 2);
                 integer iAuth = (integer)llList2String(lMenuParams, 3);
                 if (sMessage == UPMENU) {
-                    llMessageLinked(LINK_SET, iAuth, "menu "+g_sParentMenu, kAV);
+                    llMessageLinked(LINK_SET, CMD_ZERO, "menu "+g_sParentMenu, kAV);
                     return;
                 } else if (sMessage == "Vol +") {
                     g_fVolume+=g_fVolumeStep;
@@ -365,13 +330,6 @@ state active
                         SetBellElementAlpha();
                         llMessageLinked(LINK_SET, LM_SETTING_SAVE, "bell_show=" + (string)g_iBellShow, "");
                     } else llMessageLinked(LINK_SET, NOTIFY, "0"+"This %DEVICETYPE% has no visual bell element.", kAV);
-                } else if (sMenuType == "rmbell") {
-                    if (sMessage == "Yes") {
-                        llMessageLinked(LINK_SET, MENUNAME_REMOVE , g_sParentMenu + "|" + g_sSubMenu, "");
-                        llMessageLinked(LINK_SET, NOTIFY, "1"+g_sSubMenu+" App has been removed.", kAV);
-                        if (llGetInventoryType(llGetScriptName()) == INVENTORY_SCRIPT) llRemoveInventory(llGetScriptName());
-                    } else llMessageLinked(LINK_SET, NOTIFY, "0"+g_sSubMenu+" App remains installed.", kAV);
-                    return;
                 }
                 BellMenu(kAV, iAuth);
             }
@@ -412,19 +370,7 @@ state active
                 }
             }
         
-        } else if(iNum == CMD_OWNER && sStr == "runaway") {
-            llSleep(4);
-            SetBellElementAlpha();
-        } else if (iNum == REBOOT && sStr == "reboot") llResetScript();
-        else if(iNum == LINK_CMD_DEBUG){
-            integer onlyver=0;
-            if(sStr == "ver")onlyver=1;
-            llInstantMessage(kID, llGetScriptName() +" SCRIPT VERSION: "+g_sScriptVersion+", APPVERSION: "+g_sAppVersion);
-            if(onlyver)return; // basically this command was: <prefix> versions
-            DebugOutput(kID, [" HAS BELL PRIMS:", g_iHasBellPrims]);
-            DebugOutput(kID, [" BELL VISIBLE:", g_iBellShow]);
-            DebugOutput(kID, [" BELL ON:", g_iBellOn]);
-        } 
+        } else if (iNum == REBOOT) llResetScript(); 
     }
 
     control( key kID, integer nHeld, integer nChange ) {

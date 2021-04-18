@@ -233,7 +233,7 @@ state active
 
                 if(sMenu == "Menu~Main"){
                     if(sMsg == UPMENU) {
-                        llMessageLinked(LINK_SET, iAuth, "menu "+g_sParentMenu, kAv);
+                        llMessageLinked(LINK_SET, CMD_ZERO, "menu "+g_sParentMenu, kAv);
                         iRespring=FALSE;
                     } else if(sMsg == "*ALL*")
                     {

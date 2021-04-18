@@ -138,6 +138,7 @@ integer SECURE_CHANNEL;
 float g_iTotalItems;
 
 string g_sBundleName;
+string g_sOperation;
 StatusBar(float fCount) {
     fCount = 100*(fCount/g_iTotalItems);
     if (fCount > 100) fCount = 100;
@@ -150,7 +151,7 @@ StatusBar(float fCount) {
     do { i--;
         sStatusBar = "█"+llGetSubString(sStatusBar,0,-2);
     } while (i>0);
-    llSetText(g_sBundleName+"\n"+llGetSubString(sStatusBar,0,7)+sCount+llGetSubString(sStatusBar,12,-1), <1,1,0>, 1.0);
+    llSetText(g_sBundleName+"\nOperation: "+g_sOperation+"\n"+llGetSubString(sStatusBar,0,7)+sCount+llGetSubString(sStatusBar,12,-1), <1,1,0>, 1.0);
     //return llGetSubString(sStatusBar,0,7)+sCount+llGetSubString(sStatusBar,12,-1);
 }
 integer g_iUpdatePin;
@@ -251,20 +252,20 @@ default
 {
     state_entry()
     {
-        llListen(0, "", llGetCreator(), "");
-        llSay(0, "This development installer is locked. Input the developer activation code");
+        llListen(1, "", llGetCreator(), "");
+        llOwnerSay("This development installer is locked. Input the developer activation code");
         llSetText("LOCKED\nDeveloper Authorization Required", <0,1,0>,1);
     }
     listen(integer c,string n,key i,string m)
     {
-        llSay(0, "Checking...");
+        llOwnerSay( "Checking...");
         string sum = llMD5String(m,0);
         if(sum == g_sHashCode)
         {
-            llSay(0, "Authorization Granted!");
+            llOwnerSay( "Authorization Granted!");
             state alive;
         }else{
-            llSay(0, "Hashes mismatch!\nGot: "+sum+"\nExpected: "+g_sHashCode);
+            llOwnerSay( "Hashes mismatch!\nGot: "+sum+"\nExpected: "+g_sHashCode);
         }    
         
     }
@@ -370,6 +371,7 @@ state alive
                     key kNameID = llGetInventoryKey(sName);
                     TotalDone ++;
                     g_sBundleName=bundle_name;
+                    g_sOperation = sBundleType;
                     StatusBar((float)TotalDone);
                     
                     g_sCurrentOption = sOpt;
