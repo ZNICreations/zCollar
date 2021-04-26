@@ -424,10 +424,10 @@ state active
             integer iMask = llList2Integer(lTmp,0);
             string sCmd = llList2String(lTmp,1);
             if (llToLower(sCmd) == "leash configure") {
-                if(iNum &(C_WEARER|C_TRUSTED|C_OWNER)) ConfigureMenu(kMessageID, iMask);
+                if(iMask &(C_WEARER|C_TRUSTED|C_OWNER)) ConfigureMenu(kMessageID, iMask);
                 else llMessageLinked(LINK_SET,NOTIFY,"0"+"%NOACCESS% to configuring the leash particles",kMessageID);
             } else if (sCmd == "menu "+SUBMENU) {
-                if(iNum &(C_WEARER|C_TRUSTED|C_OWNER)) ConfigureMenu(kMessageID, iMask);
+                if(iMask &(C_WEARER|C_TRUSTED|C_OWNER)) ConfigureMenu(kMessageID, iMask);
                 else {
                     llMessageLinked(LINK_SET,NOTIFY,"0"+"%NOACCESS% to leash configure menu",kMessageID);
                     llMessageLinked(LINK_SET, CMD_ZERO, "menu "+PARENTMENU, kMessageID);
