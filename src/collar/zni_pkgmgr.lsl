@@ -214,6 +214,7 @@ state active
         if(iNum == COMMAND) {
             list lTmp = llParseString2List(sStr,["|>"],[]);
             integer iMask = (integer)llList2String(lTmp,0);
+            if(!(iMask&(C_OWNER|C_WEARER)))return;
             string sCmd = llList2String(lTmp,1);
             UserCommand(iMask, sCmd, kID);
         }

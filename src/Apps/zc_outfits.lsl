@@ -37,14 +37,6 @@ integer OUTFITS_ADD = -999901;
 integer OUTFITS_REM = -999902;
 
 
-integer bool(integer a){
-    if(a)return TRUE;
-    else return FALSE;
-}
-list g_lCheckboxes=["▢", "▣"];
-string TickBox(integer iValue, string sLabel) {
-    return llList2String(g_lCheckboxes, bool(iValue))+" "+sLabel;
-}
 
 integer g_iLockCore = FALSE;
 Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName) {
@@ -59,7 +51,7 @@ Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPa
 
 Menu(key kID, integer iAuth) {
     string sPrompt = "\n[Outfits App "+g_sAppVersion+"]\n\nChat Commands: \n-> wear <path>\n-> naked";
-    list lButtons = [TickBox(g_iLockCore, "Lock Core"), "◌ Configure", "Browse", "BrowseCore", "Help" ];
+    list lButtons = [Checkbox(g_iLockCore, "Lock Core"), "◌ Configure", "Browse", "BrowseCore", "Help" ];
     Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Menu~Main");
 }
 string TrueOrFalse(integer iCheck){
@@ -137,7 +129,7 @@ ConfigMenu(key kID, integer iAuth){
     string sJail = TrueOrFalse(iJail);
     string sStripAll = TrueOrFalse(iStripAll);
     
-    Dialog(kID, "\n[Outfits App "+g_sAppVersion+"]\n \nConfigure Access\n * Owner: ALWAYS\n * Trusted: "+sTrusted+"\n * Public: "+sPublic+"\n * Group: "+sGroup+"\n * Wearer: "+sWearer+"\n * Jail: "+sJail+"\n * Strip All (even not in .outfits): "+sStripAll+"\n \n** WARNING: If you disable the jail, then outfits WILL be able to browse your entire #RLV folder, not just under #RLV/.outfits", [TickBox(iTrusted, "Trusted"), TickBox(iPublic, "Public") ,TickBox(iGroup, "Group"), TickBox(iWearer, "Wearer"), TickBox(iJail, "Jail"), TickBox(iStripAll, "Strip All")], [UPMENU], 0, iAuth, "Menu~Configure");
+    Dialog(kID, "\n[Outfits App "+g_sAppVersion+"]\n \nConfigure Access\n * Owner: ALWAYS\n * Trusted: "+sTrusted+"\n * Public: "+sPublic+"\n * Group: "+sGroup+"\n * Wearer: "+sWearer+"\n * Jail: "+sJail+"\n * Strip All (even not in .outfits): "+sStripAll+"\n \n** WARNING: If you disable the jail, then outfits WILL be able to browse your entire #RLV folder, not just under #RLV/.outfits", [Checkbox(iTrusted, "Trusted"), Checkbox(iPublic, "Public") ,Checkbox(iGroup, "Group"), Checkbox(iWearer, "Wearer"), Checkbox(iJail, "Jail"), Checkbox(iStripAll, "Strip All")], [UPMENU], 0, iAuth, "Menu~Configure");
 }
 
 
@@ -336,6 +328,7 @@ state active
         if(iNum == COMMAND) {
             list lTmp = llParseString2List(sStr,["|>"],[]);
             integer iMask = llList2Integer(lTmp,0);
+            if(!(iMask&(C_OWNER|C_WEARER|C_TRUSTED|C_GROUP|C_PUBLIC)))return;
             string sCmd = llList2String(lTmp,1);
             UserCommand(iMask, sCmd, kID);
         }
@@ -376,7 +369,7 @@ state active
                         iRespring=FALSE;
                         llMessageLinked(LINK_SET, CMD_ZERO, "menu "+g_sParentMenu, kAv);
                     }
-                    else if(sMsg == TickBox(g_iLockCore, "Lock Core")){
+                    else if(sMsg == Checkbox(g_iLockCore, "Lock Core")){
                         g_iLockCore=1-g_iLockCore;
                         llSetTimerEvent(120);
                         Commit();

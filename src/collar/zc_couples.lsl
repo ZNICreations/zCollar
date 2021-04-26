@@ -1,25 +1,14 @@
 // This file is part of OpenCollar.
-// Copyright (c) 2004 - 2021 Francis Chung, Ilse Mannonen, Nandana Singh, 
-// Cleo Collins, Satomi Ahn, Joy Stipe, Wendy Starfall, Garvin Twine,   
-// littlemousy, Romka Swallowtail, Sumi Perl et al. 
-// Licensed under the GPLv2.  See LICENSE for full details. 
+// Copyright (c) 2004 - 2021 Francis Chung, Ilse Mannonen, Nandana Singh,
+// Cleo Collins, Satomi Ahn, Joy Stipe, Wendy Starfall, Garvin Twine,
+// littlemousy, Romka Swallowtail, Sumi Perl et al.
+// Licensed under the GPLv2.  See LICENSE for full details.
+#include "MasterFile.lsl"
+
 string g_sScriptVersion="8.0";
-integer LINK_CMD_DEBUG=1999;
-DebugOutput(key kID, list ITEMS){
-    integer i=0;
-    integer end=llGetListLength(ITEMS);
-    string final;
-    for(i=0;i<end;i++){
-        final+=llList2String(ITEMS,i)+" ";
-    }
-    llInstantMessage(kID, llGetScriptName() +final);
-}
 
 string g_sParentMenu = "Animations";
 string g_sSubMenu = "Couples";
-string UPMENU = "BACK";
-list     g_lMenuIDs;
-integer g_iMenuStride = 3;
 
 integer g_iAnimTimeout;
 integer g_iPermissionTimeout;
@@ -68,42 +57,6 @@ string g_sSubAnim;
 string g_sDomAnim;
 integer g_iVerbose = TRUE;
 
-//MESSAGE MAP
-//integer CMD_ZERO = 0;
-integer CMD_OWNER = 500;
-//integer CMD_TRUSTED = 501;
-//integer CMD_GROUP = 502;
-//integer CMD_WEARER = 503;
-integer CMD_EVERYONE = 504;
-//integer CMD_RLV_RELAY = 507;
-//integer CMD_SAFEWORD = 510;
-//integer CMD_BLOCKED = 520;
-
-integer NOTIFY = 1002;
-integer SAY = 1004;
-integer LOADPIN = -1904;
-integer REBOOT = -1000;
-integer LM_SETTING_SAVE = 2000;
-//integer LM_SETTING_REQUEST = 2001;
-integer LM_SETTING_RESPONSE = 2002;
-integer LM_SETTING_DELETE = 2003;
-integer LM_SETTING_EMPTY = 2004;
-
-integer MENUNAME_REQUEST = 3000;
-integer MENUNAME_RESPONSE = 3001;
-//integer MENUNAME_REMOVE = 3003;
-
-integer RLV_CMD = 6000;
-//integer RLV_REFRESH = 6001;//RLV plugins should reinstate their restrictions upon receiving this message.
-//integer RLV_CLEAR = 6002;//RLV plugins should clear their restriction lists upon receiving this message.
-
-integer ANIM_START = 7000;//send this with the name of an anim in the string part of the message to play the anim
-integer ANIM_STOP = 7001;//send this with the name of an anim in the string part of the message to stop the anim
-
-integer DIALOG = -9000;
-integer DIALOG_RESPONSE = -9001;
-integer DIALOG_TIMEOUT = -9002;
-integer SENSORDIALOG = -9003;
 
 string g_sSettingToken = "coupleanim_";
 string g_sGlobalToken = "global_";
@@ -235,9 +188,6 @@ StartNotecards() {
         }
 }
 
-integer ALIVE = -55;
-integer READY = -56;
-integer STARTUP = -57;
 default
 {
     on_rez(integer iNum){
@@ -260,7 +210,7 @@ default
 }
 state active
 {
-    on_rez(integer iStart) 
+    on_rez(integer iStart)
     {
         //added to stop anims after relog when you logged off while in an endless couple anim
         if (g_sSubAnim != "" && g_sDomAnim != "") {
@@ -285,11 +235,15 @@ state active
 
     link_message(integer iSender, integer iNum, string sStr, key kID){
         //if you don't care who gave the command, so long as they're one of the above, you can just do this instead:
-        if (iNum >= CMD_OWNER && iNum <= CMD_EVERYONE) {
+        if (iNum == COMMAND) {
+            list lTmp = llParseString2List(sStr,["|>"],[]);
+            integer iAuth = llList2Integer(lTmp,0);
+            string sCmd = llList2String(lTmp,1);
+            if(!(iAuth&(C_OWNER|C_TRUSTED|C_WEARER|C_GROUP|C_PUBLIC)))return;
             //the command was given by either owner, secowner, group member, wearer, or public user
-            list lParams = llParseString2List(sStr, [" "], []);
-            g_kCmdGiver = kID; 
-            g_iCmdAuth = iNum;
+            list lParams = llParseString2List(sCmd, [" "], []);
+            g_kCmdGiver = kID;
+            g_iCmdAuth = iAuth;
             string sCommand = llToLower(llList2String(lParams, 0));
             string sValue = llToLower(llList2String(lParams, 1));
             integer tmpiIndex = llListFindList(g_lAnimCmds, [sCommand]);
@@ -304,7 +258,7 @@ state active
                     Dialog(g_kCmdGiver, "\nChoose a partner:\n", [sTmpName], ["BACK"], 0, iNum, "sensor");
                 } else {       //no name given.
                     if (kID == g_kWearer) {                   //if commander is not sub, then treat commander as partner
-                        llMessageLinked(LINK_SET, NOTIFY, 
+                        llMessageLinked(LINK_SET, NOTIFY,
                                                         "0"+"\n\nYou didn't give the name of the person you want to animate. To " + sCommand +
                                                         " Alice Mannonen, for example, you could say:\n\n /%CHANNEL% %PREFIX%" + sCommand + " ali\n", g_kWearer);
                     } else {               //else set partner to commander
@@ -335,26 +289,17 @@ state active
             list lParams = llParseString2List(sStr, ["="], []);
             string sToken = llList2String(lParams, 0);
             string sValue = llList2String(lParams, 1);
-            
+
             //integer ind = llListFindList(g_lSettingsReqs, [sToken]);
             //if(ind!=-1)g_lSettingsReqs = llDeleteSubList(g_lSettingsReqs, ind,ind);
-            
+
             if(sToken == g_sSettingToken + "timeout")
                 g_fTimeOut = (float)sValue;
             else if (sToken == g_sSettingToken + "verbose")
                 g_iVerbose = (integer)sValue;
             else if (sToken == g_sGlobalToken+"devicename")
                 g_sDeviceName = sValue;
-        } else if(iNum == LM_SETTING_EMPTY){
-            
-            //integer ind = llListFindList(g_lSettingsReqs, [sStr]);
-            //if(ind!=-1)g_lSettingsReqs = llDeleteSubList(g_lSettingsReqs, ind,ind);
-            
-        } else if(iNum == LM_SETTING_DELETE){
-            
-            //integer ind = llListFindList(g_lSettingsReqs, [sStr]);
-            //if(ind!=-1)g_lSettingsReqs = llDeleteSubList(g_lSettingsReqs, ind,ind);
-            
+
         } else if (iNum == DIALOG_RESPONSE) {
             integer iMenuIndex = llListFindList(g_lMenuIDs, [kID]);
             if (~iMenuIndex) {
@@ -367,7 +312,7 @@ state active
                 g_lMenuIDs = llDeleteSubList(g_lMenuIDs, iMenuIndex - 1, iMenuIndex - 2 + g_iMenuStride);
                 if (sMenu == "couples") {
                     if (sMessage == UPMENU)
-                        llMessageLinked(LINK_SET, iAuth, "menu " + g_sParentMenu, kAv);
+                        llMessageLinked(LINK_SET, CMD_ZERO, "menu " + g_sParentMenu, kAv);
                     else if (sMessage == STOP_COUPLES) {
                         StopAnims();
                         CoupleAnimMenu(kAv, iAuth);
@@ -414,7 +359,7 @@ state active
                     else if ((integer)sMessage > 0 && ((string)((integer)sMessage) == sMessage)) {
                         g_fTimeOut = (float)((integer)sMessage);
                         llMessageLinked(LINK_SET, LM_SETTING_SAVE, g_sSettingToken + "timeout=" + (string)g_fTimeOut, "");
-                        string sPet; 
+                        string sPet;
                         if (g_fTimeOut > 20.0)  sPet = "(except the \"pet\" sequence) ";
                         llMessageLinked(LINK_SET,NOTIFY,"1"+"Couple Anmiations "+sPet+"play now for " + (string)llRound(g_fTimeOut) + " seconds.",kAv);
                         CoupleAnimMenu(kAv, iAuth);
@@ -434,14 +379,7 @@ state active
             llSetRemoteScriptAccessPin(iPin);
             llMessageLinked(iSender, LOADPIN, (string)iPin+"@"+llGetScriptName(),llGetKey());
         }
-        else if (iNum == REBOOT && sStr == "reboot") llResetScript();
-        else if(iNum == LINK_CMD_DEBUG){
-            integer onlyver=0;
-            if(sStr == "ver")onlyver=1;
-            llInstantMessage(kID, llGetScriptName() +" SCRIPT VERSION: "+g_sScriptVersion);
-            if(onlyver)return; // basically this command was: <prefix> versions
-            DebugOutput(kID, [" PARTNER:", g_kPartner]);
-        }
+        else if (iNum == REBOOT) llResetScript();
     }
     not_at_target() {
         llTargetRemove(g_iTargetID);

@@ -16,22 +16,11 @@ Licensed under the GPLv2. See LICENSE for full details.
 https://github.com/zontreck/zCollar
 
 */
+#include "MasterFile.lsl"
 
 string g_sParentMenu = "Main";
 string g_sSubMenu = "Addons";
 
-string COLLAR_VERSION = "10.0.0001";
-
-string Auth2Str(integer iAuth){
-    if(iAuth == CMD_OWNER)return "Owner";
-    else if(iAuth == CMD_TRUSTED)return "Trusted";
-    else if(iAuth == CMD_GROUP)return "Group";
-    else if(iAuth == CMD_WEARER)return "Wearer";
-    else if(iAuth == CMD_EVERYONE)return "Public";
-    else if(iAuth == CMD_BLOCKED)return "Blocked";
-    else if(iAuth == CMD_NOACCESS)return "No Access";
-    else return "Unknown = "+(string)iAuth;
-}
 
 integer in_range(key kID){
     if(!g_iLimitRange)return TRUE;
@@ -43,35 +32,8 @@ integer in_range(key kID){
     }
 }
 
-integer CalcAuth(key kID, integer iVerbose){
-    string sID = (string)kID;
-    // First check
-    if(llGetListLength(g_lOwner) == 0 && kID==g_kWearer)
-        return CMD_OWNER;
-    else{
-        if(llListFindList(g_lBlock,[sID])!=-1)return CMD_BLOCKED;
-        if(llListFindList(g_lOwner, [sID])!=-1)return CMD_OWNER;
-        if(llListFindList(g_lTrust,[sID])!=-1)return CMD_TRUSTED;
-        if(g_kTempOwner == kID) return CMD_TRUSTED;
-        if(kID==g_kWearer)return CMD_WEARER;
-        if(in_range(kID)){
-            if(g_kGroup!=NULL_KEY){
-                if(llSameGroup(kID))return CMD_GROUP;
-            }
-
-            if(g_iPublic)return CMD_EVERYONE;
-        }else{
-            if(iVerbose)
-                llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% because you are out of range", kID);
-        }
-    }
-
-
-    return CMD_NOACCESS;
-}
 key g_kGroup=NULL_KEY;
 list g_lOwner;
-integer NOTIFY = 1002;
 list g_lBlock;
 list g_lTrust;
 key g_kTempOwner;
@@ -96,42 +58,7 @@ DoListeners(){
 }
 
 integer g_iVerbosityLevel = 1;
-integer CMD_ZERO = 0;
-integer CMD_OWNER = 500;
-integer CMD_TRUSTED = 501;
-integer CMD_GROUP = 502;
-integer CMD_WEARER = 503;
-integer CMD_EVERYONE = 504;
-integer CMD_BLOCKED = 598; // <--- Used in auth_request, will not return on a CMD_ZERO
-//integer CMD_RLV_RELAY = 507;
-integer CMD_SAFEWORD = 510;
-//integer CMD_RELAY_SAFEWORD = 511;
-integer CMD_NOACCESS=599;
 
-//integer NOTIFY = 1002;
-integer REBOOT = -1000;
-
-integer LM_SETTING_SAVE = 2000;//scripts send messages on this channel to have settings saved
-//str must be in form of "token=value"
-integer LM_SETTING_REQUEST = 2001;//when startup, scripts send requests for settings on this channel
-integer LM_SETTING_RESPONSE = 2002;//the settings script sends responses on this channel
-integer LM_SETTING_DELETE = 2003;//delete token from settings
-
-integer MENUNAME_REQUEST = 3000;
-integer MENUNAME_RESPONSE = 3001;
-
-//integer RLV_CMD = 6000;
-//integer RLV_REFRESH = 6001;//RLV plugins should reinstate their restrictions upon receiving this message.
-
-//integer RLV_OFF = 6100; // send to inform plugins that RLV is disabled now, no message or key needed
-//integer RLV_ON = 6101; // send to inform plugins that RLV is enabled now, no message or key needed
-
-integer DIALOG = -9000;
-integer DIALOG_RESPONSE = -9001;
-integer DIALOG_TIMEOUT = -9002;
-integer DIALOG_RENDER = -9013;
-string UPMENU = "BACK";
-//string ALL = "ALL";
 
 list StrideOfList(list src, integer stride, integer start, integer end)
 {
@@ -170,7 +97,6 @@ AddonsMenu(key kID, integer iAuth){
 }
 
 UserCommand(integer iNum, string sStr, key kID) {
-    if (iNum<CMD_OWNER || iNum>CMD_WEARER) return;
     if (llToLower(sStr)==llToLower(g_sSubMenu) || llToLower(sStr) == "menu "+llToLower(g_sSubMenu)) AddonsMenu(kID, iNum);
     //else if (iNum!=CMD_OWNER && iNum!=CMD_TRUSTED && kID!=g_kWearer) RelayNotify(kID,"Access denied!",0);
     else {
@@ -179,7 +105,7 @@ UserCommand(integer iNum, string sStr, key kID) {
         //string sChangevalue = llList2String(llParseString2List(sStr, [" "], []),1);
         //string sText;
         /// [prefix] g_sSubMenu sChangetype sChangevalue
-        if(sStr == "kick_all_wearer_addons" && iNum == CMD_OWNER){
+        if(sStr == "kick_all_wearer_addons" && iNum & C_OWNER){
             integer X =0;
             integer x_end = llGetListLength(g_lAddons);
             for(X=0;X<x_end;X+=4){
@@ -197,7 +123,6 @@ UserCommand(integer iNum, string sStr, key kID) {
 }
 
 list g_lAddonFiltered = [];
-integer MENUNAME_REMOVE = 3003;
 
 integer g_iWearerAddonLimited=TRUE;
 integer g_iPendingNoMenu;
@@ -213,16 +138,8 @@ list g_lAddons;
 key g_kAddonPending;
 string g_sAddonName;
 key g_kWearer;
-list g_lMenuIDs;
-integer g_iMenuStride;
 integer g_iLocked=FALSE;
 
-integer ALIVE = -55;
-integer READY = -56;
-integer STARTUP = -57;
-
-integer SENSORDIALOG = -9003;
-integer SAY = 1004;
 default
 {
     on_rez(integer iNum){
@@ -323,8 +240,8 @@ state active
                     if(noMenu!= 1)noMenu=0;
 
                     if(llListFindList(g_lAddons, [i])==-1 && llGetOwnerKey(i)!=g_kWearer){
-                        integer AddonOwnerAuth = CalcAuth(llGetOwnerKey(i),FALSE);
-                        if(AddonOwnerAuth == CMD_OWNER || AddonOwnerAuth == CMD_TRUSTED){
+                        integer AddonOwnerAuth = CalcAuthMask(llGetOwnerKey(i),FALSE);
+                        if(AddonOwnerAuth & ( C_OWNER |C_TRUSTED)){
 
                             g_lAddons += [i, llJsonGetValue(m,["addon_name"]), llGetUnixTime(), llJsonGetValue(m,["optin"]), noMenu];
                             SayToAddonX(i, "approved", 0, "", "");
@@ -335,7 +252,7 @@ state active
                             g_sPendingAddonOptin = llJsonGetValue(m,["optin"]);
                             g_sAddonName = llJsonGetValue(m,["addon_name"]);
                             g_iPendingNoMenu=noMenu;
-                            Dialog(g_kWearer, "[ADDON]\n\nAn object named: "+n+"\nAddon Name: "+g_sAddonName+"\nOwned by: secondlife:///app/agent/"+(string)llGetOwnerKey(i)+"/about\n\nHas requested internal collar access. Grant it?", ["Yes", "No"],[],0,CMD_WEARER,"addon~add");
+                            Dialog(g_kWearer, "[ADDON]\n\nAn object named: "+n+"\nAddon Name: "+g_sAddonName+"\nOwned by: secondlife:///app/agent/"+(string)llGetOwnerKey(i)+"/about\n\nHas requested internal collar access. Grant it?", ["Yes", "No"],[],0,C_WEARER,"addon~add");
                             return;
                         }
                     }else if(llListFindList(g_lAddons, [i])==-1 && llGetOwnerKey(i) == g_kWearer){
@@ -386,7 +303,7 @@ state active
                     if(llSubStringIndex(sMsg,"intern_")!=-1)return;
                 }
 
-                llMessageLinked(LINK_SET, iNum, sMsg,kID);
+                llMessageLinked(LINK_SET, iNum,  sMsg,kID);
 
 
 
@@ -429,7 +346,13 @@ state active
         }
 
 
-        if(iNum >= CMD_OWNER && iNum <= CMD_WEARER) UserCommand(iNum, sStr, kID);
+        if(iNum == COMMAND) {
+            list lTmp = llParseString2List(sStr,["|>"],[]);
+            integer iMask = llList2Integer(lTmp,0);
+            if(!(iMask&(C_OWNER|C_WEARER|C_TRUSTED)))return;
+            string sCmd = llList2String(lTmp,1);
+            UserCommand(iMask, sCmd, kID);
+        }
         else if(iNum == MENUNAME_REQUEST && sStr == g_sParentMenu)
             llMessageLinked(iSender, MENUNAME_RESPONSE, g_sParentMenu+"|"+ g_sSubMenu,"");
         else if(iNum == DIALOG_RESPONSE){
@@ -448,7 +371,7 @@ state active
                         llMessageLinked(LINK_SET,0,"menu",kAv);
                     } else {
                         // Call this addon
-                        llMessageLinked(LINK_SET, iAuth, "menu "+sMsg, kAv);
+                        llMessageLinked(LINK_SET, 0, "menu "+sMsg, kAv);
                     }
                 } else if(sMenu == "addon~add"){
                     // process reply

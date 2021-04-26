@@ -33,14 +33,6 @@ integer g_iNoB64=FALSE; // Use base64 by default
 integer g_iWasUpgraded=FALSE; // This will not harm anything if set to true after being upgraded. However, it should eventually be set to false again
 
 
-integer bool(integer a){
-    if(a)return TRUE;
-    else return FALSE;
-}
-list g_lCheckboxes=["⬜","⬛"];
-string Checkbox(integer iValue, string sLabel) {
-    return llList2String(g_lCheckboxes, bool(iValue))+" "+sLabel;
-}
 Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName) {
     key kMenuID = llGenerateKey();
     llMessageLinked(LINK_SET, DIALOG, (string)kID + "|" + sPrompt + "|" + (string)iPage + "|" + llDumpList2String(lChoices, "`") + "|" + llDumpList2String(lUtilityButtons, "`") + "|" + (string)iAuth, kMenuID);
@@ -245,6 +237,7 @@ state active
         if(iNum == COMMAND) {
             list lTmp = llParseString2List(sStr,["|>"],[]);
             integer iMask = llList2Integer(lTmp,0);
+            if(!(iMask&(C_OWNER|C_WEARER|C_TRUSTED|C_GROUP|C_PUBLIC)))return;
             string sCmd = llList2String(lTmp,1);
             
             UserCommand(iMask, sCmd, kID);

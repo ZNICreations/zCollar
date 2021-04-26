@@ -24,5 +24,5 @@ ITEM|~footkiss
 ITEM|~stiff
 ITEM|~pet
 ITEM|.couples
-SCRIPT|oc_anim
-SCRIPT|oc_couples
+SCRIPT|zc_anim
+SCRIPT|zc_couples

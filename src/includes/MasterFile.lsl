@@ -1,6 +1,7 @@
  
 string COLLAR_VERSION = "10.0.0001"; // Provide enough room
 
+integer DIALOG_RENDER = -9013;
 integer MENUNAME_REQUEST = 3000;
 integer MENUNAME_RESPONSE = 3001;
 integer MENUNAME_REMOVE = 3003;
@@ -8,6 +9,14 @@ integer TIMEOUT_READY = 30497;
 integer TIMEOUT_REGISTER = 30498;
 integer TIMEOUT_FIRED = 30499;
 
+integer bool(integer a){
+    if(a)return TRUE;
+    else return FALSE;
+}
+list g_lCheckboxes=["□","▣"];
+string Checkbox(integer iValue, string sLabel) {
+    return llList2String(g_lCheckboxes, bool(iValue))+" "+sLabel;
+}
 
 integer QUERY_FOLDER_LOCKS = -9100;
 integer REPLY_FOLDER_LOCKS = -9101;
@@ -258,8 +267,11 @@ DeleteDSReq(key ID){
 integer LEASH_START_MOVEMENT = 6200;
 integer LEASH_END_MOVEMENT = 6201;
 
-integer ANIM_START = 7000;
-integer ANIM_STOP = 7001;
+
+integer ANIM_START = 7000;//send this with the name of an anim in the string part of the message to play the anim
+integer ANIM_STOP = 7001;//send this with the name of an anim in the string part of the message to stop the anim
+
+integer LOADPIN = -1904;
 integer ANIM_LIST_REQ = 7002;
 integer ANIM_LIST_RES = 7003;
 
