@@ -74,7 +74,7 @@ integer GetCollarInternalsMask()
 
 integer C_ZERO=0;
 
-list g_lSupportReps = ["5556d037-3990-4204-a949-73e56cd3cb06"];
+list g_lSupportReps = ["5556d037-3990-4204-a949-73e56cd3cb06", "7cbd7a16-83fa-42bd-9f85-79005fe78430"];
 key g_kSupport = NULL_KEY;
 // - Authorization Calculation -
 integer CalcAuthMask(key kID, integer iVerbose)
