@@ -5,3 +5,4 @@ Welcome to zCollar, this is a fork of OpenCollar, with active development, new f
 Join the zCollar discord to receive support, or be kept informed of any development and testing related matters.
 
 
+https://discord.gg/gkydZKF6a2
