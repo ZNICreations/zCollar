@@ -403,6 +403,7 @@ SetAllInPast()
     for(n = 0;n < iLength; n+= g_iStrideLength)
     {
         g_lMenus = llListReplaceList(g_lMenus, [0], n+3,n+3);
+        llMessageLinked(LINK_SET, NOTIFY, "0Your menu session with the collar is forcibly closed because Support Mode was terminated.", (key)llList2String(g_lMenus,n+4));
     }
 }
 
