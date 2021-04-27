@@ -85,7 +85,7 @@ integer CalcAuthMask(key kID, integer iVerbose)
     if(llListFindList(g_lTrust, [(string)kID])!=-1)iMask += C_TRUSTED;
     if(llListFindList(g_lBlock, [(string)kID])!=-1)iMask += C_BLOCKED;
     if(in_range(kID) && g_iPublic && kID!=g_kWearer)iMask += C_PUBLIC;
-    if(llSameGroup(kID) && in_range(kID) && kID!=g_kWearer)iMask += C_GROUP;
+    if(llSameGroup(kID) && in_range(kID) && kID!=g_kWearer && g_kGroup != "")iMask += C_GROUP;
 
     if(iVerbose && iMask == 0)
     {
