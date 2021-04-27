@@ -323,14 +323,14 @@ Compare(string V1, string V2){
 
 key g_kUpdateCheck = NULL_KEY;
 DoCheckUpdate(){
-    g_kUpdateCheck = llHTTPRequest("https://raw.githubusercontent.com/zontreck/zCollar/master/web/version.txt",[],"");
+    g_kUpdateCheck = llHTTPRequest("https://raw.githubusercontent.com/ZNICreations/zCollar/master/web/version.txt",[],"");
 }
 
 key g_kCheckDev;
 
 DoCheckDevUpdate()
 {
-    g_kCheckDev = llHTTPRequest("https://raw.githubusercontent.com/zontreck/zCollar/master/web/dev_version.txt",[],"");
+    g_kCheckDev = llHTTPRequest("https://raw.githubusercontent.com/ZNICreations/zCollar/master/web/dev_version.txt",[],"");
 }
 
 ///The setor method is derived from a similar PHP proposed function, though it was denied,
