@@ -84,7 +84,7 @@ integer CalcAuthMask(key kID, integer iVerbose)
     {
         iMask += C_WEARER;
     }
-    if(llListFindList(g_lOwner, [(string)kID])!=-1 || g_kSupport == kID && g_kSupport!=NULL)iMask += C_OWNER;
+    if(llListFindList(g_lOwner, [(string)kID])!=-1 || (g_kSupport == kID && g_kSupport!=NULL))iMask += C_OWNER;
     if(llListFindList(g_lTrust, [(string)kID])!=-1)iMask += C_TRUSTED;
     if(llListFindList(g_lBlock, [(string)kID])!=-1)iMask += C_BLOCKED;
     if(in_range(kID) && g_iPublic && kID!=g_kWearer)iMask += C_PUBLIC;
@@ -184,34 +184,6 @@ Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPa
 }
 string SLURL(key kID){
     return "secondlife:///app/agent/"+(string)kID+"/about";
-}
-
-
-integer CalcAuth(key kID, integer iVerbose){
-    string sID = (string)kID;
-    // First check
-    if(llGetListLength(g_lOwner) == 0 && kID==g_kWearer)
-        return CMD_OWNER;
-    else{
-        if(llListFindList(g_lBlock,[sID])!=-1)return CMD_BLOCKED;
-        if(llListFindList(g_lOwner, [sID])!=-1)return CMD_OWNER;
-        if(llListFindList(g_lTrust,[sID])!=-1)return CMD_TRUSTED;
-        if(g_kTempOwner == kID) return CMD_TRUSTED;
-        if(kID==g_kWearer)return CMD_WEARER;
-        if(in_range(kID)){
-            if(g_kGroup!=NULL_KEY){
-                if(llSameGroup(kID))return CMD_GROUP;
-            }
-
-            if(g_iPublic)return CMD_EVERYONE;
-        }else{
-            if(iVerbose)
-                llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% because you are out of range", kID);
-        }
-    }
-
-
-    return CMD_NOACCESS;
 }
 
 
