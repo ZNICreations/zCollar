@@ -1,57 +1,17 @@
-// oc_rlvextension
-// This file is part of OpenCollar.
+// zc_rlvextension
+// This file is part of zCollar.
 //  Copyright (c) 2018 - 2019 Tashia Redrose, Silkie Sabra, lillith xue                            
 // Licensed under the GPLv2.  See LICENSE for full details. 
 
 //string g_sScriptVersion = "8.0";
+
+#include "MasterFile.lsl"
 
 string g_sParentMenu = "RLV";
 string g_sSubMenu1 = "Force Sit";
 string g_sSubMenu3 = "RLV Settings";
 integer g_iStrictSit=FALSE; // Default - do not use strict mode
 
-//MESSAGE MAP
-//integer CMD_ZERO = 0;
-integer CMD_OWNER = 500;
-//integer CMD_TRUSTED = 501;
-//integer CMD_GROUP = 502;
-//integer CMD_WEARER = 503;
-integer CMD_EVERYONE = 504;
-//integer CMD_RLV_RELAY = 507;
-//integer CMD_SAFEWORD = 510;
-//integer CMD_RELAY_SAFEWORD = 511;
-
-integer NOTIFY = 1002;
-
-integer REBOOT = -1000;
-integer LINK_CMD_DEBUG=1999;
-integer LINK_CMD_RESTRICTIONS = -2576;
-integer LINK_CMD_RESTDATA = -2577;
-
-integer LM_SETTING_SAVE = 2000;//scripts send messages on this channel to have settings saved
-//str must be in form of "token=value"
-//integer LM_SETTING_REQUEST = 2001;//when startup, scripts send requests for settings on this channel
-integer LM_SETTING_RESPONSE = 2002;//the settings script sends responses on this channel
-integer LM_SETTING_DELETE = 2003;//delete token from settings
-integer LM_SETTING_EMPTY = 2004;//sent when a token has no value
-
-integer MENUNAME_REQUEST = 3000;
-integer MENUNAME_RESPONSE = 3001;
-//integer MENUNAME_REMOVE = 3003;
-
-integer RLV_CMD = 6000;
-integer RLV_REFRESH = 6001;//RLV plugins should reinstate their restrictions upon receiving this message.
-//integer RLV_CLEAR = 6002;//RLV plugins should clear their restriction lists upon receiving this message.
-
-integer RLV_OFF = 6100; // send to inform plugins that RLV is disabled now, no message or key needed
-integer RLV_ON = 6101; // send to inform plugins that RLV is enabled now, no message or key needed
-
-integer DIALOG = -9000;
-integer DIALOG_RESPONSE = -9001;
-//integer DIALOG_TIMEOUT = -9002;
-integer DIALOG_SENSOR = -9003;
-string UPMENU = "BACK";
-//string ALL = "ALL";
 
 integer g_bCanStand = TRUE;
 integer g_bCanChat = FALSE;
@@ -61,15 +21,6 @@ float g_fMaxCamDist = 2.0;
 float g_fMinCamDist = 1.0;
 
 integer g_iRLV = FALSE;
-
-integer bool(integer a){
-    if(a)return TRUE;
-    else return FALSE;
-}
-list g_lCheckboxes=["⬜","⬛"];
-string Checkbox(integer iValue, string sLabel) {
-    return llList2String(g_lCheckboxes, bool(iValue))+" "+sLabel;
-}
 
 list lRLVEx = [
     "IM"            , "sendim"      , 1     ,
@@ -90,12 +41,6 @@ list g_lTempOwners = [];
 integer g_iOwnerEx = 127;
 integer g_iTrustedEx = 95;
 
-list g_lMenuIDs;
-//integer TIMEOUT_READY = 30497;
-//integer TIMEOUT_REGISTER = 30498;
-//integer TIMEOUT_FIRED = 30499;
-//list g_lSettingsReqs = [];
-integer g_iMenuStride;
 integer g_iLocked=FALSE;
 
 //list g_lStrangerEx = [];
@@ -143,7 +88,7 @@ SetMuffle(integer bEnable)
 Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName) {
     key kMenuID = llGenerateKey();
     if (sName == "Restrictions~sensor" || sName == "find")
-    llMessageLinked(LINK_SET, DIALOG_SENSOR, (string)kID +"|"+sPrompt+"|0|``"+(string)(SCRIPTED|PASSIVE)+"`20`"+(string)PI+"`"+llDumpList2String(lUtilityButtons,"`")+"|"+llDumpList2String(lChoices,"`")+"|" + (string)iAuth, kMenuID);
+    llMessageLinked(LINK_SET, SENSORDIALOG, (string)kID +"|"+sPrompt+"|0|``"+(string)(SCRIPTED|PASSIVE)+"`20`"+(string)PI+"`"+llDumpList2String(lUtilityButtons,"`")+"|"+llDumpList2String(lChoices,"`")+"|" + (string)iAuth, kMenuID);
     else llMessageLinked(LINK_SET, DIALOG, (string)kID + "|" + sPrompt + "|" + (string)iPage + "|" + llDumpList2String(lChoices, "`") + "|" + llDumpList2String(lUtilityButtons, "`") + "|" + (string)iAuth, kMenuID);
 
     integer iIndex = llListFindList(g_lMenuIDs, [kID]);
@@ -269,21 +214,20 @@ Save(integer iBoot){
 
 integer g_iLastSitAuth = 599;
 UserCommand(integer iNum, string sStr, key kID) {
-    if (iNum<CMD_OWNER || iNum>CMD_EVERYONE) return;
    // if ((llSubStringIndex(sStr,"exceptions") && sStr != "menu "+g_sSubMenu1) || (llSubStringIndex(sStr,"exceptions") && sStr != "menu "+g_sSubMenu2)) return;
     if (sStr=="sit" || sStr == "menu "+g_sSubMenu1) MenuForceSit(kID, iNum);
     else if (sStr=="rlvsettings" || sStr == "menu "+g_sSubMenu3) {
-        if (iNum < CMD_EVERYONE) MenuSettings(kID,iNum);
+        if (!(iNum&C_PUBLIC) ) MenuSettings(kID,iNum);
         else {
             llMessageLinked(LINK_SET, NOTIFY, "0"+"%NOACCESS%", kID);
-            llMessageLinked(LINK_SET, iNum, "menu "+g_sParentMenu, kID);
+            llMessageLinked(LINK_SET, 0, "menu "+g_sParentMenu, kID);
         }
     } else { 
         string sChangetype = llToLower(llList2String(llParseString2List(sStr, [" "], []),0));
         string sChangekey = llToLower(llList2String(llParseString2List(sStr, [" "], []),1));
 //        string sChangevalue = llList2String(llParseString2List(sStr, [" "], []),2);
         if (sChangetype == "sit") {
-            if ((sChangekey == "[unsit]" || sChangekey == "unsit") && iNum <= g_iLastSitAuth ) {
+            if ((sChangekey == "[unsit]" || sChangekey == "unsit") && MaskOutranks(iNum, g_iLastSitAuth) ) {
                 if(g_iStrictSit){
                     llMessageLinked(LINK_SET, LINK_CMD_RESTRICTIONS, "Stand Up=0="+(string)iNum, kID);
                 }
@@ -291,7 +235,7 @@ UserCommand(integer iNum, string sStr, key kID) {
                 llMessageLinked(LINK_SET,RLV_CMD,"unsit=force","Macros");
                 g_iLastSitAuth = 599;
             } else {
-                if(iNum > g_iLastSitAuth){
+                if(!MaskOutranks(iNum, g_iLastSitAuth)){
                     llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to sit.", kID);
                     return;
                 }
@@ -303,7 +247,7 @@ UserCommand(integer iNum, string sStr, key kID) {
             }
         } else if(sChangetype == "unsit"){
             UserCommand(iNum, "sit unsit", kID);
-        } else if(sChangetype == "rlvex" && iNum == CMD_OWNER){
+        } else if(sChangetype == "rlvex" && iNum & C_OWNER){
             if(sChangekey == "modify"){
                 string sChangeArg1 = llToLower(llList2String(llParseString2List(sStr, [" "],[]), 2));
                 string sChangeArg2 = llToLower(llList2String(llParseString2List(sStr,[" "],[]), 3));
@@ -357,9 +301,6 @@ UserCommand(integer iNum, string sStr, key kID) {
     }
 }
 
-integer ALIVE = -55;
-integer READY = -56;
-integer STARTUP = -57;
 default
 {
     on_rez(integer iNum){
@@ -370,9 +311,7 @@ default
     }
     link_message(integer iSender, integer iNum, string sStr, key kID){
         if(iNum == REBOOT){
-            if(sStr == "reboot"){
-                llResetScript();
-            }
+            llResetScript();
         } else if(iNum == READY){
             llMessageLinked(LINK_SET, ALIVE, llGetScriptName(), "");
         } else if(iNum == STARTUP){
@@ -391,7 +330,13 @@ state active
         if(llGetStartParameter()!= 0)llResetScript();
     }
     link_message(integer iSender,integer iNum,string sStr,key kID){
-        if(iNum >= CMD_OWNER && iNum <= CMD_EVERYONE) UserCommand(iNum, sStr, kID);
+        if(iNum == COMMAND) {
+            list lTmp = llParseString2List(sStr,["|>"],[]);
+            integer iMask = llList2Integer(lTmp,0);
+            if(!(iMask&(C_OWNER|C_TRUSTED|C_WEARER|C_GROUP|C_PUBLIC)))return;
+            string sCmd = llList2String(lTmp,1);
+            UserCommand(iMask, sCmd, kID);
+        }
         else if(iNum == MENUNAME_REQUEST && sStr == g_sParentMenu) {
             llMessageLinked(iSender, MENUNAME_RESPONSE, g_sParentMenu+"|"+ g_sSubMenu1,""); // Register menu "Force Sit"
             llMessageLinked(iSender, MENUNAME_RESPONSE, g_sParentMenu+"|"+ g_sSubMenu3,""); // Register Settings Menu
@@ -472,7 +417,7 @@ state active
                 } else if (sMenu == "Force Sit") MenuForceSit(kAv,iAuth);
                 else if (sMenu == "Restrictions~sensor") {
                     if(sMsg == Checkbox(g_iStrictSit,"Strict Sit")){
-                        if(iAuth != CMD_OWNER) {
+                        if(!(iAuth & C_OWNER)) {
                             llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS%", kAv);
                             MenuForceSit(kAv,iAuth);
                         } else{
@@ -483,16 +428,16 @@ state active
                         return;
                     }
                     
-                    if (sMsg == UPMENU) llMessageLinked(LINK_SET, iAuth, "menu "+g_sParentMenu, kAv);
+                    if (sMsg == UPMENU) llMessageLinked(LINK_SET, 0, "menu "+g_sParentMenu, kAv);
                     else{
                         UserCommand(iAuth,"sit "+sMsg,kAv);
                         
                         MenuForceSit(kAv, iAuth);
                     }
                 } else if (sMenu == "Settings~Main") {
-                    if (sMsg == UPMENU) llMessageLinked(LINK_SET, iAuth, "menu "+g_sParentMenu, kAv);
+                    if (sMsg == UPMENU) llMessageLinked(LINK_SET, 0, "menu "+g_sParentMenu, kAv);
                     else if (sMsg == "Exceptions"){
-                        if (iAuth <= CMD_OWNER) MenuExceptions(kAv, iAuth);
+                        if (iAuth & C_OWNER) MenuExceptions(kAv, iAuth);
                         else llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS%!", kAv);
                     } else if (sMsg == "Camera") MenuCamera(kAv, iAuth);
                     else if (sMsg == "Chat") MenuChat(kAv, iAuth);
@@ -554,11 +499,6 @@ state active
                     }
                 }
             }
-        }else if(iNum == LM_SETTING_EMPTY){
-            
-            //integer ind = llListFindList(g_lSettingsReqs, [sStr]);
-            //if(ind!=-1)g_lSettingsReqs = llDeleteSubList(g_lSettingsReqs, ind,ind);
-            
         } else if(iNum == LM_SETTING_RESPONSE){
         // Detect here the Settings
             list lParams = llParseString2List(sStr, ["="], []);
@@ -629,9 +569,6 @@ state active
                 }
             }
         } else if(iNum == LM_SETTING_DELETE){
-            // This is recieved back from settings when a setting is deleted
-            //integer ind = llListFindList(g_lSettingsReqs, [sStr]);
-            //if(ind!=-1)g_lSettingsReqs = llDeleteSubList(g_lSettingsReqs, ind,ind);
             
             
             if(sStr == "global_locked") g_iLocked=FALSE;
@@ -648,7 +585,7 @@ state active
                 g_lTempOwners = []; 
                 ApplyAllExceptions(TRUE,FALSE);
             }
-        } else if(iNum == -99999){
+        } else if(iNum == UPDATER){
             if(sStr == "update_active")llResetScript();
         }else if (iNum == RLV_OFF){
             ApplyAllExceptions(TRUE,TRUE);
@@ -661,11 +598,8 @@ state active
             llMessageLinked(LINK_SET,LINK_CMD_RESTDATA,"MinCamDist="+(string)g_fMinCamDist,kID);
             llMessageLinked(LINK_SET,LINK_CMD_RESTDATA,"MaxCamDist="+(string)g_fMaxCamDist,kID);
             llMessageLinked(LINK_SET,LINK_CMD_RESTDATA,"BlurAmount="+(string)g_iBlurAmount,kID);
-        } else if (iNum == REBOOT && sStr == "reboot") {
+        } else if (iNum == REBOOT) {
             llResetScript();
-        } else if(iNum == LINK_CMD_DEBUG){
-            /// This will be changed to handle information differently..
-            // TODO
         } else if (iNum == LINK_CMD_RESTRICTIONS) {
             list lCMD = llParseString2List(sStr,["="],[]);
             if (llList2String(lCMD,0) == "unsit" && llList2Integer(lCMD,2) < 0) g_bCanStand = llList2Integer(lCMD,1);

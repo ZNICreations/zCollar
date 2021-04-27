@@ -1,8 +1,8 @@
 // This file is part of OpenCollar.
-// Copyright (c) 2004 - 2021 Francis Chung, Ilse Mannonen, Nandana Singh,
-// Cleo Collins, Satomi Ahn, Joy Stipe, Wendy Starfall, Garvin Twine,
-// littlemousy, Romka Swallowtail, Sumi Perl et al.
-// Licensed under the GPLv2.  See LICENSE for full details.
+// Copyright (c) 2004 - 2021 Francis Chung, Ilse Mannonen, Nandana Singh, 
+// Cleo Collins, Satomi Ahn, Joy Stipe, Wendy Starfall, Garvin Twine,   
+// littlemousy, Romka Swallowtail, Sumi Perl et al. 
+// Licensed under the GPLv2.  See LICENSE for full details. 
 #include "MasterFile.lsl"
 
 string g_sScriptVersion="8.0";
@@ -198,9 +198,7 @@ default
     }
     link_message(integer iSender, integer iNum, string sStr, key kID){
         if(iNum == REBOOT){
-            if(sStr == "reboot"){
-                llResetScript();
-            }
+            llResetScript();
         } else if(iNum == READY){
             llMessageLinked(LINK_SET, ALIVE, llGetScriptName(), "");
         } else if(iNum == STARTUP){
@@ -210,7 +208,7 @@ default
 }
 state active
 {
-    on_rez(integer iStart)
+    on_rez(integer iStart) 
     {
         //added to stop anims after relog when you logged off while in an endless couple anim
         if (g_sSubAnim != "" && g_sDomAnim != "") {
@@ -242,7 +240,7 @@ state active
             if(!(iAuth&(C_OWNER|C_TRUSTED|C_WEARER|C_GROUP|C_PUBLIC)))return;
             //the command was given by either owner, secowner, group member, wearer, or public user
             list lParams = llParseString2List(sCmd, [" "], []);
-            g_kCmdGiver = kID;
+            g_kCmdGiver = kID; 
             g_iCmdAuth = iAuth;
             string sCommand = llToLower(llList2String(lParams, 0));
             string sValue = llToLower(llList2String(lParams, 1));
@@ -258,7 +256,7 @@ state active
                     Dialog(g_kCmdGiver, "\nChoose a partner:\n", [sTmpName], ["BACK"], 0, iNum, "sensor");
                 } else {       //no name given.
                     if (kID == g_kWearer) {                   //if commander is not sub, then treat commander as partner
-                        llMessageLinked(LINK_SET, NOTIFY,
+                        llMessageLinked(LINK_SET, NOTIFY, 
                                                         "0"+"\n\nYou didn't give the name of the person you want to animate. To " + sCommand +
                                                         " Alice Mannonen, for example, you could say:\n\n /%CHANNEL% %PREFIX%" + sCommand + " ali\n", g_kWearer);
                     } else {               //else set partner to commander
@@ -289,17 +287,17 @@ state active
             list lParams = llParseString2List(sStr, ["="], []);
             string sToken = llList2String(lParams, 0);
             string sValue = llList2String(lParams, 1);
-
+            
             //integer ind = llListFindList(g_lSettingsReqs, [sToken]);
             //if(ind!=-1)g_lSettingsReqs = llDeleteSubList(g_lSettingsReqs, ind,ind);
-
+            
             if(sToken == g_sSettingToken + "timeout")
                 g_fTimeOut = (float)sValue;
             else if (sToken == g_sSettingToken + "verbose")
                 g_iVerbose = (integer)sValue;
             else if (sToken == g_sGlobalToken+"devicename")
                 g_sDeviceName = sValue;
-
+        
         } else if (iNum == DIALOG_RESPONSE) {
             integer iMenuIndex = llListFindList(g_lMenuIDs, [kID]);
             if (~iMenuIndex) {
@@ -359,7 +357,7 @@ state active
                     else if ((integer)sMessage > 0 && ((string)((integer)sMessage) == sMessage)) {
                         g_fTimeOut = (float)((integer)sMessage);
                         llMessageLinked(LINK_SET, LM_SETTING_SAVE, g_sSettingToken + "timeout=" + (string)g_fTimeOut, "");
-                        string sPet;
+                        string sPet; 
                         if (g_fTimeOut > 20.0)  sPet = "(except the \"pet\" sequence) ";
                         llMessageLinked(LINK_SET,NOTIFY,"1"+"Couple Anmiations "+sPet+"play now for " + (string)llRound(g_fTimeOut) + " seconds.",kAv);
                         CoupleAnimMenu(kAv, iAuth);

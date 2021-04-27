@@ -123,7 +123,7 @@ list GetBundleInformation()
     for(i=0;i<end;i++){
         string name=llGetInventoryName(INVENTORY_NOTECARD,i);
         list lParts = llParseString2List(name,["_"],[]);
-        if(llList2String(lParts,0)=="BUNDLE")
+        if(llList2String(lParts,0)=="PKG")
         {
             if(iTmp == g_iBundleNumber)return [name, llList2String(lParts,-1)];
             iTmp++;
@@ -253,19 +253,19 @@ default
     state_entry()
     {
         llListen(1, "", llGetCreator(), "");
-        llOwnerSay("This development installer is locked. Input the developer activation code");
+        llOwnerSay( "This development installer is locked. Input the developer activation code");
         llSetText("LOCKED\nDeveloper Authorization Required", <0,1,0>,1);
     }
     listen(integer c,string n,key i,string m)
     {
-        llOwnerSay( "Checking...");
+        llSay(0, "Checking...");
         string sum = llMD5String(m,0);
         if(sum == g_sHashCode)
         {
-            llOwnerSay( "Authorization Granted!");
+            llSay(0, "Authorization Granted!");
             state alive;
         }else{
-            llOwnerSay( "Hashes mismatch!\nGot: "+sum+"\nExpected: "+g_sHashCode);
+            llSay(0, "Hashes mismatch!\nGot: "+sum+"\nExpected: "+g_sHashCode);
         }    
         
     }
@@ -282,7 +282,7 @@ state alive
         //llWhisper(0, "Installer is ready with "+(string)llGetFreeMemory()+"b");
         llListen(g_iUpdateChan, "", "", "");
         llListen(g_iLegacyUpdateChannel, "", "", "");
-        UpdateDSRequest(NULL, llGetNotecardLine(".name",0), "read_name_card|0");
+        UpdateDSRequest(NULL, llGetNotecardLine("name",0), "read_name_card|0");
         llParticleSystem([]);
         //llWhisper(0, "Calculating the number of assets contained in bundles...");
         
@@ -318,7 +318,7 @@ state alive
                 UPDATE_VERSION = llList2String(lTmp,2);
                 
                 
-                UpdateDSRequest(kID, llGetNotecardLine(".name", iLine), "read_name_card|"+(string)iLine);
+                UpdateDSRequest(kID, llGetNotecardLine("name", iLine), "read_name_card|"+(string)iLine);
             } else if(llList2String(lMeta,0) == "read_bundle")
             {
                 string bundle_name = llList2String(lMeta,1);
@@ -486,7 +486,7 @@ state alive
                     g_kCollar = i;
                     g_iUpdatePin = (integer)llList2String(lParam,1);
                     // Also send the oc_dialog since the shim makes use of the dialog script for the package selection process
-                    llRemoteLoadScriptPin(i, "oc_dialog", g_iUpdatePin,TRUE,0);
+                    llRemoteLoadScriptPin(i, "zc_dialog", g_iUpdatePin,TRUE,0);
                     
                     llRemoteLoadScriptPin(i, "zc_update_shim", g_iUpdatePin, TRUE, 0); // 0 = from installer itself, 1 = from relay orb.
 
@@ -527,7 +527,7 @@ state alive
             {
                 //llSay(0, "Relay is ready to enter stage 2");
                 //llSay(0, "Sending shim to relay");
-                llGiveInventory(g_kRelay, "oc_dialog");
+                llGiveInventory(g_kRelay, "zc_dialog");
                 llGiveInventory(g_kRelay, "zc_update_shim");
                 
                 llRegionSayTo(g_kRelay, g_iUpdateChan+1, "ShimSent|"+(string)g_kRelayTarget+"|"+UPDATE_VERSION);
@@ -535,7 +535,7 @@ state alive
             } else if(llList2String(lParam,0) == "shiminstalled" && g_iUpdateRunning)
             {
                 
-                llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Send|INSTALL|oc_dialog");
+                llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Send|INSTALL|zc_dialog");
                 llSleep(5);
                 llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Prepared");
             } else if(llList2String(lParam,0) == "pkg_get" && g_iUpdateRunning)

@@ -139,14 +139,6 @@ HelpMenu(key kID, integer iAuth){
     Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Menu~Help");
 }
 
-integer bool(integer a){
-    if(a)return TRUE;
-    else return FALSE;
-}
-list g_lCheckboxes=["▢", "▣"];
-string Checkbox(integer iValue, string sLabel) {
-    return llList2String(g_lCheckboxes, bool(iValue))+" "+sLabel;
-}
 integer g_iUpdatePin = 0;
 //string g_sDeviceName;
 //string g_sWearerName;
@@ -375,9 +367,7 @@ default
     }
     link_message(integer iSender, integer iNum, string sStr, key kID){
         if(iNum == REBOOT){
-            if(sStr == "reboot"){
-                llResetScript();
-            }
+            llResetScript();
         } else if(iNum == READY){
             llOwnerSay("@detach=n");
             llMessageLinked(LINK_SET, ALIVE, llGetScriptName(), "");
@@ -792,9 +782,8 @@ state active
             }
 
         } else if(iNum == REBOOT){
-            if(sStr=="reboot"){
-                llResetScript();
-            }
+            llResetScript();
+            
 
         } else if(iNum == 0){
             // Auth request!
@@ -820,7 +809,7 @@ state active
             } else {
                 llOwnerSay("@detach=y");
             }
-        }else if(iNum == -99999){
+        }else if(iNum == UPDATER){
             if(sStr == "update_active")llResetScript();
         }
         //llOwnerSay(llDumpList2String([iSender,iNum,sStr,kID],"^"));

@@ -285,9 +285,7 @@ default
     }
     link_message(integer iSender, integer iNum, string sStr, key kID){
         if(iNum == REBOOT){
-            if(sStr == "reboot"){
-                llResetScript();
-            }
+            llResetScript();
         } else if(iNum == READY){
             llMessageLinked(LINK_SET, ALIVE, llGetScriptName(), "");
         } else if(iNum == STARTUP){
@@ -529,6 +527,9 @@ state active
         {
             integer iMask = (integer)((string)kID);
             LocksMenu(g_kMenuUser, g_iMenuAuth, iMask);
+        } else if(iNum == REBOOT)
+        {
+            llResetScript();
         }
         //llOwnerSay(llDumpList2String([iSender,iNum,sStr,kID],"^"));
     }

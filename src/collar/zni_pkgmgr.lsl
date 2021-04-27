@@ -29,7 +29,7 @@ Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPa
 }
 
 Menu(key kID, integer iAuth) {
-    string sPrompt = "\n[Package Management]\n\n* NOTE: This package manager only permits uninstalling bundles. To install new software, use a installer.";
+    string sPrompt = "\n[Package Management]\n\n* NOTE: This package manager only permits uninstalling packages. To install new software, use a installer.";
     list lButtons = [];
     integer i=0;
     integer end = llGetListLength(g_lInstalledBundles);
@@ -77,7 +77,7 @@ ScanSoftware()
     for(i=0;i<end;i++)
     {
         string sName = llGetInventoryName(INVENTORY_NOTECARD,i);
-        if(llSubStringIndex(sName, "BUNDLE_")!=-1)
+        if(llSubStringIndex(sName, "PKG_")!=-1)
         {
             list lParts = llParseString2List(sName,["_"],[]);
             g_lInstalledBundles += [sName, llList2String(lParts,2)];
@@ -94,9 +94,7 @@ default
     }
     link_message(integer iSender, integer iNum, string sStr, key kID){
         if(iNum == REBOOT){
-            if(sStr == "reboot"){
-                llResetScript();
-            }
+            llResetScript();
         } else if(iNum == READY){
             llMessageLinked(LINK_SET, ALIVE, llGetScriptName(), "");
         } else if(iNum == STARTUP){

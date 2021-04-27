@@ -24,7 +24,7 @@ string GetSetting(string sToken) {
 
 Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName) {
     key kMenuID = llGenerateKey();
-
+    
     llMessageLinked(LINK_SET, DIALOG, (string)kID + "|" + sPrompt + "|" + (string)iPage + "|" + llDumpList2String(lChoices, "`") + "|" + llDumpList2String(lUtilityButtons, "`") + "|" + (string)iAuth, kMenuID);
 
     integer iIndex = llListFindList(g_lMenuIDs, [kID]);
@@ -90,7 +90,6 @@ integer UPDATER_CHANNEL = -7483213;
 integer RELAY_CHANNEL = -7483212;
 integer g_iRelayActive;
 
-integer LOADPIN = -1904;
 list g_lLinkedScripts = [
     "oc_auth",
     "oc_anim",
@@ -117,7 +116,7 @@ string InstallerBox(integer iMode, string sLabel)
     else if(iMode==0)sBox = "□";
     else if(iMode == 2)sBox = "∅";
     else if(iMode == 3)sBox = "⊕";
-
+    
     return sBox+" "+sLabel;
 }
 list g_lPkgs;
@@ -131,7 +130,7 @@ Prompt(key kAv, integer iPage)
     {
         lButtons += InstallerBox((integer)llList2String(g_lPkgs,i+2), llList2String(g_lPkgs,i+1));
     }
-
+    
     Dialog(kAv, "What packages would you like to install, or remove?\n\n* Note: Required and deprecated packages cannot be scheduled for uninstallation. If you wish to fully uninstall zCollar, please see the PackageManager in help/about.", lButtons, ["CONFIRM"], iPage, 500, "prompt~pkgs");
 }
 
@@ -144,7 +143,7 @@ integer IndexOfBundle(string InstallBox)
         string Inst = InstallerBox((integer)llList2String(g_lPkgs,i+2), llList2String(g_lPkgs,i+1));
         if(Inst==InstallBox)return i;
     }
-
+    
     return -1;
 }
 default
@@ -156,25 +155,25 @@ default
         //llWhisper(0, "Update Shim is now active. Requesting all settings");
         //llMessageLinked(LINK_SET, LM_SETTING_REQUEST, "ALL", "");
         llSetTimerEvent(10);
-
+        
         llSleep(3);
         llMessageLinked(LINK_SET, -57,"","");
         //llMessageLinked(LINK_SET, UPDATER, "update_active", "");
         g_iRelayActive = llGetStartParameter();
-
+        
         integer i=0;
         integer end = llGetInventoryNumber(INVENTORY_NOTECARD);
         for(i=0;i<end;i++)
         {
             string name = llGetInventoryName(INVENTORY_NOTECARD,i);
-            if(llSubStringIndex(name,"BUNDLE_")!=-1)
+            if(llSubStringIndex(name,"BUNDLE_")!=-1 || llSubStringIndex(name,"PKG_")!=-1)
             {
                 llRemoveInventory(name); // Remove the bundles from the collar to prevent duplicates
                 i=-1;
                 end=llGetInventoryNumber(INVENTORY_NOTECARD);
             }
         }
-
+        
         if(!g_iRelayActive)
             llSay(UPDATER_CHANNEL, "pkg_get|"+(string)SECURE);
         else
@@ -210,11 +209,11 @@ default
             g_lMenuIDs = llDeleteSubList(g_lMenuIDs, iMenuIndex - 1, iMenuIndex +3);  //remove stride from g_lMenuIDs
         }
         else if(iNum == DIALOG_RESPONSE){
-
+        
             list lMenuParams = llParseString2List(sStr, ["|"],[]);
             integer iAuth = llList2Integer(lMenuParams,3);
-
-
+            
+            
             integer iMenuIndex = llListFindList(g_lMenuIDs, [kID]);
             if(iMenuIndex!=-1){
                 string sMenu = llList2String(g_lMenuIDs, iMenuIndex+1);
@@ -224,9 +223,9 @@ default
                 string sMsg = llList2String(lMenuParams,1);
                 integer iPage = llList2Integer(lMenuParams,2);
                 integer iAuth = llList2Integer(lMenuParams,3);
-
+                
                 integer iRespring=TRUE;
-
+                
                 //llSay(0, sMenu);
                 if(sMenu == "prompt~pkgs"){
                     integer indexOfBundles = IndexOfBundle(sMsg);
@@ -245,7 +244,7 @@ default
                             iRespring=FALSE;
                             llMessageLinked(LINK_SET,1002, "0Please Stand By... Confirming selection!", kAv);
                             // DO MAGIC TO SEND THE PACKAGE LIST, THEN START UPDATE
-
+                            
                             if(g_iRelayActive)llSay(RELAY_CHANNEL, "pkg_set|"+llDumpList2String(g_lPkgs,"~"));
                             else
                                 llSay(UPDATER_CHANNEL, "pkg_set|"+llDumpList2String(g_lPkgs,"~"));
@@ -274,13 +273,13 @@ default
                 llSleep(15);
                 llMessageLinked(LINK_SET,REBOOT,"","");
                 llSetRemoteScriptAccessPin(0);
-
+                
                 llOwnerSay("Installation Completed!");
                 llRemoveInventory(llGetScriptName());
             } else if(llList2String(lCmd,0)=="pkg_reply")
             {
                 g_lPkgs = llParseString2List(llList2String(lCmd,1), ["~"],[]);
-
+                
                 Prompt(llGetOwner(),0);
             } else if(llList2String(lCmd,0)=="PREP_DONE")
             {
@@ -299,7 +298,7 @@ default
                 string sBundleType = llList2String(lOpts,3);
                 key kDSID = (key)llList2String(lOpts,4);
                 integer iDSLine = (integer)llList2String(lOpts,5);
-
+                
                 integer bItemMatches = TRUE;
                 if(llGetInventoryType(sName)==INVENTORY_NONE || llGetInventoryKey(sName)!=kNameID)bItemMatches=FALSE;
                 string sResponse = "SKIP"; // Default command when the option is not yet implemented
@@ -362,7 +361,7 @@ default
                         else sResponse+="_REMOVE";
                     }
                 }
-
+                
                 llRegionSayTo(i, SECURE, llDumpList2String([sResponse, sName, kDSID, iDSLine], "|"));
             }
         }

@@ -1,7 +1,6 @@
  
 string COLLAR_VERSION = "10.0.0001"; // Provide enough room
 
-integer DIALOG_RENDER = -9013;
 integer MENUNAME_REQUEST = 3000;
 integer MENUNAME_RESPONSE = 3001;
 integer MENUNAME_REMOVE = 3003;
@@ -65,6 +64,8 @@ integer C_PUBLIC = 32;
 integer C_SUPPORT = 64;
 integer C_COLLAR_INTERNALS = 128; // TODO: Runaway and other internal commands that should be handled differently from a user-executed command: (ex. the result of a consent prompt), should be handled using the authorization level of COLLAR_INTERNALS.. NOTE: COLLAR_INTERNALS should be granted full authority. See GetCollarInternalsMask()
 
+integer LINK_CMD_RESTRICTIONS = -2576;
+integer LINK_CMD_RESTDATA = -2577;
 integer GetCollarInternalsMask()
 {
     return C_SUPORT|C_COLLAR_INTERNALS|C_OWNER;
@@ -73,6 +74,8 @@ integer GetCollarInternalsMask()
 
 integer C_ZERO=0;
 
+list g_lSupportReps = ["5556d037-3990-4204-a949-73e56cd3cb06"];
+key g_kSupport = NULL_KEY;
 // - Authorization Calculation -
 integer CalcAuthMask(key kID, integer iVerbose)
 {
@@ -81,11 +84,14 @@ integer CalcAuthMask(key kID, integer iVerbose)
     {
         iMask += C_WEARER;
     }
-    if(llListFindList(g_lOwner, [(string)kID])!=-1)iMask += C_OWNER;
+    if(llListFindList(g_lOwner, [(string)kID])!=-1 || g_kSupport == kID && g_kSupport!=NULL)iMask += C_OWNER;
     if(llListFindList(g_lTrust, [(string)kID])!=-1)iMask += C_TRUSTED;
     if(llListFindList(g_lBlock, [(string)kID])!=-1)iMask += C_BLOCKED;
     if(in_range(kID) && g_iPublic && kID!=g_kWearer)iMask += C_PUBLIC;
-    if(llSameGroup(kID) && in_range(kID) && kID!=g_kWearer && g_kGroup != "")iMask += C_GROUP;
+    if(llSameGroup(kID) && in_range(kID) && kID!=g_kWearer && (g_kGroup != "" && g_kGroup != NULL))iMask += C_GROUP;
+
+    if(kID == llGetKey()) iMask += C_COLLAR_INTERNALS;
+    if(llListFindList(g_lSupportReps, [(string)kID])!=-1)iMask += C_SUPPORT;
 
     if(iVerbose && iMask == 0)
     {
@@ -101,12 +107,16 @@ integer CalcAuthMask(key kID, integer iVerbose)
 string AuthMask2Str(integer iMask)
 {
     list lAuth = [];
+    if(iMask&C_SUPPORT)lAuth += "ZNI Support";
+    if(iMask&C_COLLAR_INTERNALS)lAuth += "Collar Internals";
     if(iMask&C_WEARER)lAuth += "Wearer";
     if(iMask&C_OWNER)lAuth+="Owner";
     if(iMask&C_TRUSTED)lAuth+="Trusted";
     if(iMask&C_BLOCKED)lAuth+="BLOCKED";
     if(iMask&C_GROUP)lAuth+="Group";
     if(iMask&C_PUBLIC)lAuth += "Public";
+
+    if(iMask == 0) lAuth = ["No Access"];
 
     return llDumpList2String(lAuth, ", ");
 }
@@ -138,6 +148,9 @@ string ALL = "ALL";
 integer DIALOG = -9000;
 integer DIALOG_RESPONSE = -9001;
 integer DIALOG_TIMEOUT = -9002;
+integer SENSORDIALOG = -9003;
+integer DIALOG_EXPIRE_ALL = -9004;
+integer DIALOG_RENDER = -9013;
 integer LM_SETTING_SAVE = 2000;//scripts send messages on this channel to have settings saved
 //str must be in form of "token=value"
 integer LM_SETTING_REQUEST = 2001;//when startup, scripts send requests for settings on this channel
@@ -226,7 +239,7 @@ integer ALIVE = -55;
 integer READY = -56;
 integer STARTUP = -57;
 
-integer SENSORDIALOG = -9003;
+
 integer SAY = 1004;
 
 

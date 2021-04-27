@@ -220,7 +220,7 @@ integer in_range(key kID){
         else return FALSE;
     }
 }
-
+key g_kPendingSupport;
 UserCommand(integer iAuth, string sCmd, key kID){
     if(sCmd == "getauth"){
         llMessageLinked(LINK_SET, NOTIFY, "0Your access level is: "+AuthMask2Str(iAuth)+" ("+(string)iAuth+")", kID);
@@ -239,9 +239,17 @@ UserCommand(integer iAuth, string sCmd, key kID){
         RunawayMenu(kID,iAuth);
     }
     
+    if(iAuth & C_SUPPORT && sCmd == "support")
+    {
+        // - Initiate Support Mode -
+        g_kPendingSupport = kID;
+        Dialog(llGetOwner(), "[ZNI Support]\n \nsecondlife:///app/agent/"+(string)kID+"/about is requesting support access. This will grant temporary owner privileges on your collar, you can revoke this at any time by issuing the 'endsupport' command. Do you agree?", [], ["Yes", "No"], 0, C_WEARER, "Consent~Support");
+        return;
+    }
+    
     if(iAuth & (C_OWNER|C_WEARER)){
         integer not_wearer = FALSE;
-        if(iAuth&C_OWNER)not_wearer=TRUE;
+        if(!iAuth&C_WEARER)not_wearer=TRUE;
         if(sCmd == "safeword-disable" && not_wearer)g_iSafewordDisable=TRUE;
         else if(sCmd == "safeword-enable" && not_wearer)g_iSafewordDisable=FALSE;
             
@@ -251,7 +259,15 @@ UserCommand(integer iAuth, string sCmd, key kID){
         if(sCmdx == "channel" && not_wearer){
             g_iChannel = (integer)llList2String(lCmd,1);
             llMessageLinked(LINK_SET, LM_SETTING_SAVE, "global_channel="+(string)g_iChannel, kID);
-        
+        }else if(sCmdx == "endsupport")
+        {
+            if(g_kSupport!=NULL)
+            {
+                llMessageLinked(LINK_SET, NOTIFY, "1Ending support mode...", kID);
+                llMessageLinked(LINK_SET, NOTIFY, "0Support mode is being terminated", g_kSupport);
+                g_kSupport=NULL;
+                llMessageLinked(LINK_SET, DIALOG_EXPIRE_ALL, "", "");
+            }
         } else if(sCmdx == "prefix" && not_wearer){
             if(llList2String(lCmd,1)==""){
                 llMessageLinked(LINK_SET,NOTIFY,"0The prefix is currently set to: "+g_sPrefix+". If you wish to change it, supply the new prefix to this same command", kID);
@@ -295,7 +311,7 @@ UserCommand(integer iAuth, string sCmd, key kID){
         } 
     }
     if (iAuth &(C_WEARER|C_TRUSTED|C_PUBLIC|C_GROUP|C_BLOCKED)) return;
-    if (iAuth &C_OWNER && sCmd == "runaway") {
+    if (iAuth &C_COLLAR_INTERNALS && sCmd == "runaway") {
         // trigger runaway sequence if approval was given
         if(g_iRunawayMode == 2){
             g_iRunawayMode=-1;
@@ -337,9 +353,8 @@ default
     }
     link_message(integer iSender, integer iNum, string sStr, key kID){
         if(iNum == REBOOT){
-            if(sStr == "reboot"){
-                llResetScript();
-            }
+            llResetScript();
+            
         } else if(iNum == READY){
             llMessageLinked(LINK_SET, ALIVE, llGetScriptName(), "");
         } else if(iNum == STARTUP){
@@ -439,7 +454,7 @@ state active
             integer iAuth = CalcAuthMask(kID, FALSE);
             //llOwnerSay("{API} Calculate auth for "+(string)kID+"="+(string)iAuth+";"+sStr);
             llMessageLinked(LINK_SET, AUTH_REPLY, "AuthReply|"+(string)kID+"|"+(string)iAuth,sStr);
-        } else if(iNum ==COMMAND){
+        } else if(iNum == COMMAND){
             list lTmp = llParseString2List(sStr,["|>"],[]);
             integer iMask = (integer)llList2String(lTmp,0);
             UserCommand(iMask, llList2String(lTmp,1), kID);
@@ -549,9 +564,8 @@ state active
                 }
             }
         } else if(iNum == REBOOT){
-            if(sStr=="reboot"){
-                llResetScript();
-            }
+            llResetScript();
+            
         } 
         else if(iNum == DIALOG_RESPONSE){
             integer iMenuIndex = llListFindList(g_lMenuIDs, [kID]);
@@ -628,19 +642,32 @@ state active
                         if(iAuth &(C_WEARER|C_OWNER) && g_iRunaway){
                             g_iRunawayMode=2;
                             llMessageLinked(LINK_SET, NOTIFY_OWNERS, "%WEARERNAME% has runaway.", "");
-                            llMessageLinked(LINK_SET, COMMAND, "1|>runaway", g_kWearer);
+                            llMessageLinked(LINK_SET, COMMAND, (string)C_COLLAR_INTERNALS+"|>runaway", g_kWearer);
                             llMessageLinked(LINK_SET, CMD_SAFEWORD, "safeword", "");
                             llMessageLinked(LINK_SET, COMMAND, "1|>clear", g_kWearer);
                             
                             llMessageLinked(LINK_SET, TIMEOUT_REGISTER, "5", "spring_access:"+(string)kAv);
                         }
                     }
+                } else if(sMenu == "Consent~Support")
+                {
+                    if(sMsg == "No")
+                    {
+                        llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to activating support", g_kPendingSupport);
+                        g_kPendingSupport=NULL;
+                    }else if(sMsg == "Yes")
+                    {
+                        llMessageLinked(LINK_SET, NOTIFY, "1Support mode is activating... Stand by", g_kPendingSupport);
+                        g_kSupport=g_kPendingSupport;
+                        g_kPendingSupport=NULL;
+                        llMessageLinked(LINK_SET, CMD_ZERO, "menu", g_kSupport);
+                    }
                 }
             }
         } else if(iNum == RLV_REFRESH){
             if(g_kGroup==NULL_KEY)llOwnerSay("@setgroup=y");
             else llOwnerSay("@setgroup:"+(string)g_kGroup+"=force;setgroup=n");
-        } else if(iNum == -99999){
+        } else if(iNum == UPDATER){
             if(sStr == "update_active")llResetScript();
         } else if(iNum == TIMEOUT_FIRED)
         {
