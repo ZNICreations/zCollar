@@ -252,6 +252,7 @@ default
 {
     state_entry()
     {
+        state alive;
         llListen(1, "", llGetCreator(), "");
         llOwnerSay( "This development installer is locked. Input the developer activation code");
         llSetText("LOCKED\nDeveloper Authorization Required", <0,1,0>,1);
