@@ -344,10 +344,6 @@ string setor(integer iTest, string sTrue, string sFalse){
     else return sFalse;
 }
 
-list g_lTestReports = ["5556d037-3990-4204-a949-73e56cd3cb06", "1a828b4e-6345-4bb3-8d41-f93e6621ba25"]; // Aria and Roan
-// Any other team members please add yourself if you want feedback/bug reports. Or ask to be added if you do not have commit access
-// These IDs will only be in here during the testing period to allow for the experimental feedback/bug report system to do its thing
-// As most do not post to github, i am experimenting to see if a menu option in the collar of a Alpha/Beta might encourage feedback or bugs to be sent even if it has to be sent through a llInstantMessage
 
 integer g_iDoTriggerUpdate=FALSE;
 key g_kWelder = NULL_KEY;
@@ -484,8 +480,9 @@ state active
                     } else {
                         // do weld
                         llMessageLinked(LINK_SET, NOTIFY, "1Please wait...", g_kWelder);
-                        llMessageLinked(LINK_SET, LM_SETTING_SAVE, "intern_weld=1", g_kWelder);
+                        llMessageLinked(LINK_SET, LM_SETTING_SAVE, "intern_weld="+(string)g_kWelder, "origin");
                         g_iWelded=TRUE;
+                        g_kWeldBy = g_kWelder;
                     }
                 } else if(sMenu=="Menu~Auth"){
                     if(sMsg == UPMENU){
@@ -708,11 +705,10 @@ state active
                 }
             } else if(sToken == "intern"){
                 if(sVar == "weld"){
-                    g_iWelded=(integer)sVal;
+                    g_iWelded=TRUE;
+                    g_kWeldBy = (key)sVal;
 
                     if(!g_iLocked)llMessageLinked(LINK_SET,LM_SETTING_SAVE, "global_locked=1","");
-                } else if(sVar == "weldby"){
-                    g_kWeldBy = (key)sVal;
                 }
             } else if(sToken == "capture"){
                 if(sVar == "status"){
@@ -778,7 +774,7 @@ state active
                 list lParameters = llParseString2List(sStr, ["|"],[]);
                 Menu(g_kWeldBy,llList2Integer(lParameters,2));
                 llMessageLinked(LINK_SET, NOTIFY_OWNERS, "%WEARERNAME%'s collar has been welded", g_kWelder);
-                llMessageLinked(LINK_SET, NOTIFY, "1Weld completed", g_kWearer); //We shouldn't have to send this to the welder. Welder should always be an owner.
+                llMessageLinked(LINK_SET, NOTIFY, "0Weld completed", g_kWearer); //We shouldn't have to send this to the welder. Welder should always be an owner.
             }
 
         } else if(iNum == REBOOT){
