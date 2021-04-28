@@ -8,6 +8,7 @@ Copyright ©2020
 
 Aria (Tashia Redrose)
     * April 2021        -       Rebranded under zCollar
+                                Add Support Menu and command to states script
     *August 2020       -       Created oc_states
                     -           Due to significant issues with original implementation, States has been turned into a anti-crash script instead of a script state manager.
                     -           Repurpose oc_states to be anti-crash and a interactive settings editor.
@@ -15,11 +16,10 @@ Aria (Tashia Redrose)
     
 et al.
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/zontreck/zCollar
+https://github.com/ZNICreations/zCollar
 
 */
 #include "MasterFile.lsl"
-
 
 integer g_iVerbosityLevel = 1;
 
@@ -28,7 +28,7 @@ integer g_iVerbosityLevel = 1;
 
 SettingsMenu(integer stridePos, key kAv, integer iAuth)
 {
-    string sText = "OpenCollar - Interactive Settings editor";
+    string sText = "zCollar - Interactive Settings editor";
     list lBtns = [];
     if(!(iAuth & C_OWNER)){
         sText+="\n\nOnly owner may use this feature";
@@ -76,6 +76,11 @@ SettingsMenu(integer stridePos, key kAv, integer iAuth)
     g_iLastStride=stridePos;
     Dialog(kAv, sText,lBtns, setor((lBtns!=[]), ["+ NEW", UPMENU], []), 0, iAuth, "settings~edit~"+(string)stridePos);
     
+}
+
+SupportMenu(key kID, integer iAuth)
+{
+    Dialog(kID, "[ZNI Support]\n \n* CAUTION IS ADVISED *\n\n> Reformat \t\t- Erases all settings\n> END \t\t- End Support", ["Reformat", "END"], [UPMENU], 0, iAuth, "support");
 }
 
 list setor(integer test, list a, list b){
@@ -219,7 +224,17 @@ default
             list lTmp = llParseString2List(sStr,["|>"],[]);
             integer iMask = llList2Integer(lTmp,0);
             string sCmd = llList2String(lTmp,1);
-            if(!(iMask&(C_OWNER)))return;
+            if(!(iMask&(C_OWNER))){
+                if(iMask&C_SUPPORT)
+                {
+                    if(llToLower(sCmd) == "menu /support")
+                    {
+                        llMessageLinked(LINK_SET, 0, "support", kID);
+                        return;
+                    }
+                }
+                return;
+            }
             if(sCmd == "fix"){
                 g_iExpectAlive=1;
                 llResetTime();
@@ -230,7 +245,7 @@ default
                 
                 llMessageLinked(LINK_SET, LM_SETTING_REQUEST, "ALL", "");
             }
-            if(llToLower(sStr)=="settings edit"){
+            if(llToLower(sCmd)=="settings edit"){
                 g_lSettings=[];
                 g_iLoading=TRUE;
                 g_iWaitMenu=TRUE;
@@ -239,6 +254,10 @@ default
                 llResetTime();
                 llMessageLinked(LINK_SET, LM_SETTING_REQUEST, "ALL","");
                 llSetTimerEvent(1);
+            }
+            if(llToLower(sCmd) == "menu /support" && (iMask&C_SUPPORT))
+            {
+                SupportMenu(kID, iMask);
             }
         } else if(iNum == TIMEOUT_REGISTER){
             g_lTimers += [(string)kID, llGetUnixTime(), (integer)sStr];
@@ -331,6 +350,18 @@ default
                     g_lSettings += [g_sTokenView,g_sVariableView,"not set"];
                     
                     SettingsMenu(3, kAv,iAuth);
+                } else if(sMenu == "support")
+                {
+                    if(sMsg == UPMENU)
+                    {
+                        llMessageLinked(LINK_SET, 0, "menu", kAv);
+                    } else if(sMsg == "Reformat")
+                    {
+                        llMessageLinked(LINK_SET, LM_SETTING_RESET, "", kAv);
+                    } else if(sMsg == "END")
+                    {
+                        llMessageLinked(LINK_SET, 0, "endsupport", kAv);
+                    }
                 }
                         
             }

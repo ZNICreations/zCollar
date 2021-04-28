@@ -399,7 +399,7 @@ state active
             if (llGetOwnerKey(i) != g_kWearer) return;
             //play ping pong with the Sub AO
             if (m == "zCollar?") llRegionSayTo(g_kWearer, g_iInterfaceChannel, "zCollar=Yes");
-            else if (m == "OpenCollar=Yes") {
+            else if (m == "zCollar=Yes") {
                 llOwnerSay("\n\nATTENTION: You are attempting to wear more than one zCollar core. This causes errors with other compatible accessories and your RLV relay. For a smooth experience, and to avoid wearing unnecessary script duplicates, please consider to take off \""+n+"\" manually if it doesn't detach automatically.\n");
                 llRegionSayTo(i,g_iInterfaceChannel,"There can be only one!");
             } else if (m == "There can be only one!" ) {
@@ -687,6 +687,6 @@ state active
     no_sensor(){
         if(!(g_iMode&ACTION_SCANNER))return;
         
-        Dialog(g_kMenuUser, "OpenCollar\nAdd Menu", [], [">Wearer<", UPMENU], 0, g_iCurrentAuth, "scan~add");
+        Dialog(g_kMenuUser, "zCollar\nAdd Menu", [], [">Wearer<", UPMENU], 0, g_iCurrentAuth, "scan~add");
     }
 }
