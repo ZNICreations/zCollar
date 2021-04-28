@@ -24,7 +24,6 @@ list g_lOwner;
 list g_lTrust;
 list g_lBlock;
 
-key g_kTempOwner;
 
 integer g_iMode;
 string g_sSafeword = "RED";
@@ -208,16 +207,6 @@ UpdateLists(key kID, key kIssuer){
                 llMessageLinked(LINK_SET, LM_SETTING_SAVE, "auth_block="+llDumpList2String(g_lBlock,","),"origin");
             }
         }
-    }
-}
-integer g_iLimitRange=TRUE;
-integer in_range(key kID){
-    if(!g_iLimitRange)return TRUE;
-    if(kID == g_kWearer)return TRUE;
-    else{
-        vector pos = llList2Vector(llGetObjectDetails(kID, [OBJECT_POS]),0);
-        if(llVecDist(llGetPos(),pos) <=20.0)return TRUE;
-        else return FALSE;
     }
 }
 key g_kPendingSupport;
@@ -491,7 +480,7 @@ state active
                 } else if(sVar == "limitrange"){
                     g_iLimitRange = (integer)sVal;
                 } else if(sVar == "tempowner"){
-                    g_kTempOwner = (key)sVal;
+                    g_kCaptor = (key)sVal;
                 } else if(sVar == "runaway"){
                     g_iRunaway=(integer)sVal;
                 }
@@ -549,7 +538,7 @@ state active
                 } else if(sVar == "limitrange"){
                     g_iLimitRange = TRUE;
                 } else if(sVar == "tempowner"){
-                    g_kTempOwner = "";
+                    g_kCaptor = "";
                 } else if(sVar == "runaway"){
                     g_iRunaway=TRUE;
                 }

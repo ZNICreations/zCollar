@@ -63,6 +63,7 @@ integer C_PUBLIC = 32;
 // Not implemented commands: SUPPORT , COLLAR_INTERNALS
 integer C_SUPPORT = 64;
 integer C_COLLAR_INTERNALS = 128; // TODO: Runaway and other internal commands that should be handled differently from a user-executed command: (ex. the result of a consent prompt), should be handled using the authorization level of COLLAR_INTERNALS.. NOTE: COLLAR_INTERNALS should be granted full authority. See GetCollarInternalsMask()
+integer C_CAPTOR = 256;
 
 integer LINK_CMD_RESTRICTIONS = -2576;
 integer LINK_CMD_RESTDATA = -2577;
@@ -71,7 +72,18 @@ integer GetCollarInternalsMask()
     return C_SUPORT|C_COLLAR_INTERNALS|C_OWNER;
 }
 
+integer g_iLimitRange=TRUE;
+integer in_range(key kID){
+    if(!g_iLimitRange)return TRUE;
+    if(kID == g_kWearer)return TRUE;
+    else{
+        vector pos = llList2Vector(llGetObjectDetails(kID, [OBJECT_POS]),0);
+        if(llVecDist(llGetPos(),pos) <=20.0)return TRUE;
+        else return FALSE;
+    }
+}
 
+key g_kCaptor;
 integer C_ZERO=0;
 
 list g_lSupportReps = ["5556d037-3990-4204-a949-73e56cd3cb06", "7cbd7a16-83fa-42bd-9f85-79005fe78430"];
@@ -89,6 +101,9 @@ integer CalcAuthMask(key kID, integer iVerbose)
     if(llListFindList(g_lBlock, [(string)kID])!=-1)iMask += C_BLOCKED;
     if(in_range(kID) && g_iPublic && kID!=g_kWearer)iMask += C_PUBLIC;
     if(llSameGroup(kID) && in_range(kID) && kID!=g_kWearer && (g_kGroup != "" && g_kGroup != NULL))iMask += C_GROUP;
+
+    if(g_kCaptor != "") iMask += C_CAPTOR;
+    if(iMask&C_CAPTOR && !(iMask&C_TRUSTED))iMask += C_TRUSTED;
 
     if(kID == llGetKey()) iMask += C_COLLAR_INTERNALS;
     if(llListFindList(g_lSupportReps, [(string)kID])!=-1)iMask += C_SUPPORT;
@@ -115,6 +130,7 @@ string AuthMask2Str(integer iMask)
     if(iMask&C_BLOCKED)lAuth+="BLOCKED";
     if(iMask&C_GROUP)lAuth+="Group";
     if(iMask&C_PUBLIC)lAuth += "Public";
+    if(iMask&C_CAPTOR)lAuth += "Captor";
 
     if(iMask == 0) lAuth = ["No Access"];
 
