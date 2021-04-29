@@ -152,6 +152,12 @@ default
     {
         SECURE = llRound(llFrand(8383288));
         llListen(SECURE, "", "", "");
+        
+        if(llGetInventoryType("oc_dialog") != INVENTORY_NONE)
+        {
+            llRemoveInventory("oc_dialog");
+        }
+        
         //llWhisper(0, "Update Shim is now active. Requesting all settings");
         //llMessageLinked(LINK_SET, LM_SETTING_REQUEST, "ALL", "");
         llSetTimerEvent(10);
@@ -288,6 +294,8 @@ default
                 llSleep(1);
                 llMessageLinked(LINK_SET,STARTUP,"","");
                 llSleep(3);
+                llMessageLinked(LINK_SET, LOADPIN , "oc_dialog","");
+                llSleep(2);
                 llRegionSayTo(i,RELAY_CHANNEL,"pkg_get");
             } else {
                 //llSay(0, "Unimplemented updater command: "+m);

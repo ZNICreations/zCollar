@@ -488,7 +488,7 @@ state alive
                     g_iUpdatePin = (integer)llList2String(lParam,1);
                     // Also send the oc_dialog since the shim makes use of the dialog script for the package selection process
                     llRemoteLoadScriptPin(i, "zc_dialog", g_iUpdatePin,TRUE,0);
-                    
+                    llRemoteLoadScriptPin(i, "zc_linkprim_hammer", g_iUpdatePin,TRUE,0);
                     llRemoteLoadScriptPin(i, "zc_update_shim", g_iUpdatePin, TRUE, 0); // 0 = from installer itself, 1 = from relay orb.
 
 
@@ -529,6 +529,7 @@ state alive
                 //llSay(0, "Relay is ready to enter stage 2");
                 //llSay(0, "Sending shim to relay");
                 llGiveInventory(g_kRelay, "zc_dialog");
+                llGiveInventory(g_kRelay, "zc_linkprim_hammer");
                 llGiveInventory(g_kRelay, "zc_update_shim");
                 
                 llRegionSayTo(g_kRelay, g_iUpdateChan+1, "ShimSent|"+(string)g_kRelayTarget+"|"+UPDATE_VERSION);
@@ -537,6 +538,7 @@ state alive
             {
                 
                 llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Send|INSTALL|zc_dialog");
+                llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Send|INSTALL|zc_linkprim_hammer");
                 llSleep(5);
                 llRegionSayTo(g_kRelay, g_iUpdateChan+1, "Prepared");
             } else if(llList2String(lParam,0) == "pkg_get" && g_iUpdateRunning)
