@@ -104,7 +104,6 @@ Menu(key kID, integer iAuth) {
     Dialog(kID, sPrompt, lButtons, lUtility, 0, iAuth, "Menu~Main");
 }
 key g_kGroup = "";
-integer g_iLimitRange=TRUE;
 integer g_iPublic=FALSE;
 integer g_iCaptured = FALSE;
 AccessMenu(key kID, integer iAuth){
@@ -457,9 +456,15 @@ state active
                 if(sMenu == "Menu~Main"){
                     if(sMsg == Checkbox(g_iLocked,"Lock")){
                         if(iAuth&(C_OWNER|C_TRUSTED) && g_iLocked){
-                            UserCommand(iAuth, "unlock", kAv);
+                            if(!(iAuth&C_CAPTOR))
+                                UserCommand(iAuth, "unlock", kAv);
+                            else
+                                llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to the lock", kAv);
                         } else if(iAuth&(C_OWNER|C_TRUSTED|C_WEARER )  && !g_iLocked){
-                            UserCommand(iAuth, "lock", kAv);
+                            if(!(iAuth&C_CAPTOR))
+                                UserCommand(iAuth, "unlock", kAv);
+                            else
+                                llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to the lock", kAv);
                         } else {
                             llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to the lock", kAv);
                         }

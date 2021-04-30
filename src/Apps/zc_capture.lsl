@@ -22,8 +22,8 @@ string g_sSubMenu = "Capture";
 
 
 
-string g_sScriptVersion = "8.0";
-string g_sAppVersion = "1.1";
+string g_sScriptVersion = "10.0";
+string g_sAppVersion = "1.2";
 
 
 
@@ -71,12 +71,11 @@ key g_kExpireFor;
 integer g_iExpireMode=0;
 
 UserCommand(integer iNum, string sStr, key kID) {
-    if (llSubStringIndex(sStr,llToLower(g_sSubMenu)) && sStr != "menu "+g_sSubMenu) return;
     if (iNum & C_COLLAR_INTERNALS && sStr == "runaway") {
         g_lOwner = g_lTrust = g_lBlock = [];
         return;
     }
-    if (sStr==g_sSubMenu || sStr == "menu "+g_sSubMenu) {
+    if (llToLower(sStr)==llToLower(g_sSubMenu) || llToLower(sStr) == "menu "+llToLower(g_sSubMenu)) {
         if(iNum & C_OWNER)
             Menu(kID, iNum);
         else if (kID == g_kCaptor) StopCapture(kID, iNum); // if we are the Captor ask if we want to stop capture instead.
@@ -98,7 +97,7 @@ UserCommand(integer iNum, string sStr, key kID) {
                 if(!(iNum&(C_OWNER|C_WEARER)))return;
                 llSay(0,(string)g_iFlagAtLoad+" [InitialBootFlags]");
                 llSay(0, (string)g_kCaptor+" [TempOwner]");
-                llSay(0, (string)iNum+" [AuthLevel]");
+                llSay(0, (string)iNum+" [AuthLevel] "+AuthMask2Str(iNum));
             }else if(sChangevalue=="on"){
                 if(g_iEnabled){
                     llMessageLinked(LINK_SET,NOTIFY, "0Capture mode already enabled.", g_kWearer);
@@ -250,15 +249,17 @@ state active
     }
     
     link_message(integer iSender,integer iNum,string sStr,key kID){
-        if(iNum == COMMAND && sStr == "0|>menu" && g_iEnabled && !g_iCaptured && in_range(kID)) StartCapture(kID, 0); // When the collar is touched by someone without permission and capture is enabled show the Capture dialog.
-        if(iNum == COMMAND) {
+        if(iNum == COMMAND)
+        {
             list lTmp = llParseString2List(sStr,["|>"],[]);
             integer iMask = llList2Integer(lTmp,0);
-            if(iMask&(C_OWNER|C_WEARER|C_TRUSTED)){
+            if(!(iMask&(C_OWNER|C_WEARER|C_TRUSTED))){
+                if(g_iEnabled && !g_iCaptured && in_range(kID) &&( llToLower(llList2String(lTmp,1))=="menu" || llToLower(llList2String(lTmp,1))=="capture"))StartCapture(kID,iMask);
+            }else if(iMask&(C_OWNER|C_WEARER|C_TRUSTED)){
                 string sCmd = llList2String(lTmp,1);
                 UserCommand(iMask, sCmd, kID);
             }
-        }
+        } // When the collar is touched by someone without permission and capture is enabled show the Capture dialog.
         if(iNum == MENUNAME_REQUEST && sStr == g_sParentMenu)
             llMessageLinked(iSender, MENUNAME_RESPONSE, g_sParentMenu+"|"+ g_sSubMenu,"");
         else if(iNum == UPDATER){

@@ -12,7 +12,7 @@ et al.
 
 
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/zontreck/zCollar
+https://github.com/ZNICreations/zCollar
 */
 #include "MasterFile.lsl"
 
@@ -212,8 +212,14 @@ state active
         if(iNum == COMMAND) {
             list lTmp = llParseString2List(sStr,["|>"],[]);
             integer iMask = (integer)llList2String(lTmp,0);
-            if(!(iMask&(C_OWNER|C_WEARER)))return;
             string sCmd = llList2String(lTmp,1);
+            if(!(iMask&(C_OWNER|C_WEARER)) || iMask&C_CAPTOR){
+                if(llToLower(sCmd)==llToLower(g_sSubMenu) || llToLower(sCmd) == "menu "+llToLower(g_sSubMenu)){
+                    llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to package management", kID);
+                    llMessageLinked(LINK_SET,0,"menu "+g_sParentMenu,kID);
+                    return;
+                }
+            }
             UserCommand(iMask, sCmd, kID);
         }
         else if(iNum == MENUNAME_REQUEST && sStr == g_sParentMenu)

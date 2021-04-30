@@ -140,6 +140,8 @@ string AuthMask2Str(integer iMask)
 // Test order: iMask1>iMask2
 integer MaskOutranks(integer iMask1, integer iMask2)
 {
+    if(iMask1 & C_COLLAR_INTERNALS) return TRUE;
+    
     // If the first mask has the owner bit, and the second mask has the owner bit, then false.
     if(iMask1&C_OWNER && !(iMask2&C_OWNER))return TRUE;
     else if(iMask1&C_OWNER && iMask2&C_OWNER)return TRUE;

@@ -16,7 +16,7 @@ Felkami (Caraway Ohmai)
     
 et al.
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/zontreck/zCollar
+https://github.com/ZNICreations/zCollar
 
 */
 #include "MasterFile.lsl"
@@ -649,7 +649,8 @@ state active
                         llMessageLinked(LINK_SET, NOTIFY, "1Support mode is activating... Stand by", g_kPendingSupport);
                         g_kSupport=g_kPendingSupport;
                         g_kPendingSupport=NULL;
-                        llMessageLinked(LINK_SET, CMD_ZERO, "menu", g_kSupport);
+                        llMessageLinked(LINK_SET, CMD_ZERO, "menu /support", g_kSupport);
+                        llWhisper(0, "ZNI Support Mode activated by secondlife:///app/agent/"+(string)g_kSupport+"/about\n \n[To end: "+g_sPrefix+" endsupport]");
                     }
                 }
             }
