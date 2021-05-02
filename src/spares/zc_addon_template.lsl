@@ -101,6 +101,10 @@ default
             g_iLMLastSent = llGetUnixTime();
             Link("ping", 0, "", g_kCollar);
         }
+
+        if(llGetUnixTime() >= (g_iLMLastRecv + (5*60)) && g_kCollar != NULL_KEY){
+            llResetScript();
+        }
         
         if (g_kCollar == NULL_KEY) Link("online", 0, "", llGetOwner());
     }
@@ -111,6 +115,7 @@ default
         {
             // This signal, indicates the collar has approved the addon and that communication requests will be responded to if the requests are valid collar LMs.
             g_kCollar = id;
+            g_iLMLastRecv = llGetUnixTime();
             Link("from_addon", LM_SETTING_REQUEST, "ALL", "");
         }
         else if (sPacketType == "dc" && g_kCollar == id)
@@ -176,7 +181,7 @@ default
                         {
                             if (sMsg == UPMENU)
                             {
-                                Link("from_addon", iAuth, "menu Addons", kAv);
+                                Link("from_addon", 0, "menu Addons", kAv);
                             }
                             else if (sMsg == "A Button")
                             {
