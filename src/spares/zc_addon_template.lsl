@@ -101,12 +101,6 @@ default
             g_iLMLastSent = llGetUnixTime();
             Link("ping", 0, "", g_kCollar);
         }
-
-        if (llGetUnixTime() > (g_iLMLastRecv + (5 * 60)) && g_kCollar != NULL_KEY)
-        {
-            g_kCollar = NULL_KEY;
-            llResetScript(); // perform our action on disconnect
-        }
         
         if (g_kCollar == NULL_KEY) Link("online", 0, "", llGetOwner());
     }
