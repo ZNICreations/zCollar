@@ -1,40 +1,25 @@
 /*
-THIS FILE IS HEREBY RELEASED UNDER THE Public Domain
-This script is released public domain, unlike other OC scripts for a specific and limited reason, because we want to encourage third party plugin creators to create for OpenCollar and use whatever permissions on their own work they see fit.  No portion of OpenCollar derived code may be used excepting this script,  without the accompanying GPLv2 license.
--Authors Attribution-
-Aria (tiff589) - (August 2020)
-Lysea - (December 2020)
+This file is a part of zCollar
+Copyright 2021
+
+: Contributors :
+Tashia Redrose
+    * May 2021  -   Created example gag addon script
+
+
+Licensed under the GPLv2
+https://github.com/ZNICreations/zCollar
 */
+#include "MasterFile.lsl"
 
 integer API_CHANNEL = 0x60b97b5e;
 
 //list g_lCollars;
-string g_sAddon = "Test Addon";
+string g_sAddon = "Cloth Gag";
 
-//integer CMD_ZERO            = 0;
-integer CMD_OWNER           = 500;
-//integer CMD_TRUSTED         = 501;
-//integer CMD_GROUP           = 502;
-integer CMD_WEARER          = 503;
-integer CMD_EVERYONE        = 504;
-//integer CMD_BLOCKED         = 598; // <--- Used in auth_request, will not return on a CMD_ZERO
-//integer CMD_RLV_RELAY       = 507;
-//integer CMD_SAFEWORD        = 510;
-//integer CMD_RELAY_SAFEWORD  = 511;
-//integer CMD_NOACCESS        = 599;
-
-//integer LM_SETTING_SAVE     = 2000; //scripts send messages on this channel to have settings saved, <string> must be in form of "token=value"
-integer LM_SETTING_REQUEST  = 2001; //when startup, scripts send requests for settings on this channel
-integer LM_SETTING_RESPONSE = 2002; //the settings script sends responses on this channel
-//integer LM_SETTING_DELETE   = 2003; //delete token from settings
-//integer LM_SETTING_EMPTY    = 2004; //sent when a token has no value
-
-integer DIALOG          = -9000;
-integer DIALOG_RESPONSE = -9001;
-integer DIALOG_TIMEOUT  = -9002;
 
 /*
- * Since Release Candidate 1, Addons will not receive all link messages without prior opt-in.
+ * Since (8.0) Release Candidate 1, Addons will not receive all link messages without prior opt-in.
  * To opt in, add the needed link messages to g_lOptedLM = [], they'll be transmitted on
  * the initial registration and can be updated at any time by sending a packet of type `update`
  * Following LMs require opt-in:
@@ -42,10 +27,6 @@ integer DIALOG_TIMEOUT  = -9002;
  */
 list g_lOptedLM     = [];
 
-list g_lMenuIDs;
-integer g_iMenuStride;
-
-string UPMENU = "BACK";
 
 Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName) {
     key kMenuID = llGenerateKey();
@@ -56,19 +37,18 @@ Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPa
     if (~iIndex) g_lMenuIDs = llListReplaceList(g_lMenuIDs, [ kID, kMenuID, sName ], iIndex, iIndex + g_iMenuStride - 1);
     else g_lMenuIDs += [kID, kMenuID, sName];
 }
-
+integer g_iGagged;
 Menu(key kID, integer iAuth) {
-    string sPrompt = "\n[Menu App]";
-    list lButtons  = ["A Button"];
+    string sPrompt = "\n[Gag Addon]";
+    list lButtons  = [Checkbox(g_iGagged, "Gag")];
     
     //llSay(0, "opening menu");
     Dialog(kID, sPrompt, lButtons, ["DISCONNECT", UPMENU], 0, iAuth, "Menu~Main");
 }
 
 UserCommand(integer iNum, string sStr, key kID) {
-    if (iNum<CMD_OWNER || iNum>CMD_WEARER) return;
     if (llSubStringIndex(llToLower(sStr), llToLower(g_sAddon)) && llToLower(sStr) != "menu " + llToLower(g_sAddon)) return;
-    if (iNum == CMD_OWNER && llToLower(sStr) == "runaway") {
+    if (iNum & C_COLLAR_INTERNALS && llToLower(sStr) == "runaway") {
         return;
     }
 
@@ -107,11 +87,12 @@ Link(string packet, integer iNum, string sStr, key kID){
 key g_kCollar=NULL_KEY;
 integer g_iLMLastRecv;
 integer g_iLMLastSent;
-
+integer g_iVerbosity=1;
 default
 {
     state_entry()
     {
+        llOwnerSay("@clear");
         API_CHANNEL = ((integer)("0x" + llGetSubString((string)llGetOwner(), 0, 8))) + 0xf6eb - 0xd2;
         llListen(API_CHANNEL, "", "", "");
         Link("online", 0, "", llGetOwner()); // This is the signal to initiate communication between the addon and the collar
@@ -125,18 +106,13 @@ default
             g_iLMLastSent = llGetUnixTime();
             Link("ping", 0, "", g_kCollar);
         }
-
-        if (llGetUnixTime() > (g_iLMLastRecv + (5 * 60)) && g_kCollar != NULL_KEY)
-        {
-            g_kCollar = NULL_KEY;
-            llResetScript(); // perform our action on disconnect
-        }
         
         if (g_kCollar == NULL_KEY) Link("online", 0, "", llGetOwner());
     }
     
     listen(integer channel, string name, key id, string msg){
         string sPacketType = llJsonGetValue(msg, ["pkt_type"]);
+        if(g_iVerbosity>= 5)llOwnerSay("Addon Got Packet: "+msg);
         if (sPacketType == "approved" && g_kCollar == NULL_KEY)
         {
             // This signal, indicates the collar has approved the addon and that communication requests will be responded to if the requests are valid collar LMs.
@@ -168,17 +144,58 @@ default
                     string sVar   = llList2String(lPar, 1);
                     string sVal   = llList2String(lPar, 2);
                     
-                    if (sToken == "auth")
+                    if (sToken == "clothgag")
                     {
-                        if (sVar == "owner")
+                        if (sVar == "gagged")
                         {
-                            llSay(0, "owner values is: " + sVal);
+                            g_iGagged=(integer)sVal;
+                            if(g_iGagged){
+                                llSetAlpha(1, ALL_SIDES);
+                                llOwnerSay("@detach=n");
+                                llOwnerSay("@chatnormal=n");
+                                llOwnerSay("@chatshout=n");
+                                llOwnerSay("@chatwhisper=n");
+                            } else {
+                                llSetAlpha(0,ALL_SIDES);
+                                llOwnerSay("@clear");
+                            }
+                            //llSay(0, "owner values is: " + sVal);
+                        }
+                    } else if(sToken == "global")
+                    {
+                        if(sVar == "checkboxes")
+                        {
+                            g_lCheckboxes=llParseString2List(sVal,[","],[]);
+                        } else if(sVar == "verbosity")
+                        {
+                            g_iVerbosity=(integer)sVal;
                         }
                     }
+                    
+                    
+                    if(sStr=="settings=sent")
+                    {
+                        // OK
+                        if(g_iGagged){
+                            llSetAlpha(1, ALL_SIDES);
+                            llOwnerSay("@detach=n");
+                            llOwnerSay("@chatnormal=n");
+                            llOwnerSay("@chatshout=n");
+                            llOwnerSay("@chatwhisper=n");
+                        } else {
+                            llSetAlpha(0,ALL_SIDES);
+                            llOwnerSay("@clear");
+                        }
+                    }
+                            
                 }
-                else if (iNum >= CMD_OWNER && iNum <= CMD_EVERYONE)
+                else if (iNum == COMMAND)
                 {
-                    UserCommand(iNum, sStr, kID);
+                    list lTmp = llParseString2List(sStr,["|>"],[]);
+                    integer iMask = llList2Integer(lTmp,0);
+                    string sCmd = llList2String(lTmp,1);
+                    if(!(iMask&(C_OWNER|C_TRUSTED)))return; 
+                    UserCommand(iMask, sCmd, kID);
                     
                 }
                 else if (iNum == DIALOG_TIMEOUT)
@@ -197,23 +214,31 @@ default
                         key kAv = llList2Key(lMenuParams, 0);
                         string sMsg = llList2String(lMenuParams, 1);
                         integer iAuth = llList2Integer(lMenuParams, 3);
-                        
+                        integer iRespring=TRUE;
                         if (sMenu == "Menu~Main")
                         {
                             if (sMsg == UPMENU)
                             {
-                                Link("from_addon", iAuth, "menu Addons", kAv);
+                                iRespring=FALSE;
+                                Link("from_addon", 0, "menu Addons", kAv);
                             }
-                            else if (sMsg == "A Button")
+                            else if (sMsg == Checkbox(g_iGagged,"Gag"))
                             {
-                                llSay(0, "This is an example addon.");
+                                g_iGagged = 1-g_iGagged;
+                                Link("from_addon", LM_SETTING_SAVE, "clothgag_gagged="+(string)g_iGagged, "");
+                                if(g_iGagged){
+                                    Link("from_addon", NOTIFY, "1%WEARERNAME% has been gagged", kAv);
+                                }else Link("from_addon", NOTIFY, "1%WEARERNAME%'s gag has been removed", kAv);
                             }
                             else if (sMsg == "DISCONNECT")
                             {
+                                iRespring=FALSE;
                                 Link("offline", 0, "", llGetOwnerKey(g_kCollar));
                                 g_lMenuIDs = [];
                                 g_kCollar = NULL_KEY;
                             }
+                            
+                            if(iRespring)Menu(kAv,iAuth);
                         }
                     }
                 }
