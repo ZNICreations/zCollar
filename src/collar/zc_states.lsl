@@ -77,10 +77,14 @@ SettingsMenu(integer stridePos, key kAv, integer iAuth)
     Dialog(kAv, sText,lBtns, setor((lBtns!=[]), ["+ NEW", UPMENU], []), 0, iAuth, "settings~edit~"+(string)stridePos);
     
 }
+SupportSettings(key kID, integer iAuth)
+{
+    Dialog(kID, "[zCollar Support Settings]\n \n* ZNI SUPPORT SETTINGS *\n\n> LockOut - Locks out support for wearer. This also changes the updater protocol, locking out the wearer from using an updater", [Checkbox(g_iSupportLockout, "LockOut"), "INITIATE"], [UPMENU], 0, iAuth, "support~S");
+}
 
 SupportMenu(key kID, integer iAuth)
 {
-    Dialog(kID, "[ZNI Support]\n \n* CAUTION IS ADVISED *\n\n> Reformat \t\t- Erases all settings\n> END \t\t- End Support", ["Reformat", "END"], [UPMENU], 0, iAuth, "support");
+    Dialog(kID, "[ZNI Support]\n \n* CAUTION IS ADVISED *\n\n> Reformat \t\t- Erases all settings\n> END \t\t- End Support", ["Reformat", "END", "Unleash"], [UPMENU], 0, iAuth, "support");
 }
 
 list setor(integer test, list a, list b){
@@ -259,6 +263,10 @@ default
             {
                 SupportMenu(kID, iMask);
             }
+            if(llToLower(sCmd) == "menu support_settings" && (iMask&(C_OWNER|C_SUPPORT)))
+            {
+                SupportSettings(kID, iMask);
+            }
         } else if(iNum == TIMEOUT_REGISTER){
             g_lTimers += [(string)kID, llGetUnixTime(), (integer)sStr];
             llResetTime();
@@ -272,7 +280,7 @@ default
                 key kAv = llList2Key(lMenuParams,0);
                 string sMsg = llList2String(lMenuParams,1);
                 integer iAuth = llList2Integer(lMenuParams,3);
-                integer iRemenu=FALSE;
+                integer iRemenu=TRUE;
                 
                 if(sMenu == "Menu~Main"){
                     if(sMsg == UPMENU){
@@ -355,13 +363,38 @@ default
                     if(sMsg == UPMENU)
                     {
                         llMessageLinked(LINK_SET, 0, "menu", kAv);
+                        iRemenu = FALSE;
                     } else if(sMsg == "Reformat")
                     {
                         llMessageLinked(LINK_SET, LM_SETTING_RESET, "", kAv);
                     } else if(sMsg == "END")
                     {
                         llMessageLinked(LINK_SET, 0, "endsupport", kAv);
+                    } else if(sMsg == "Unleash")
+                    {
+                        llMessageLinked(LINK_SET, COMMAND, (string)C_COLLAR_INTERNALS+"|>unleash", kAv);
                     }
+                    
+                    if(iRemenu)SupportMenu(kAv,iAuth);
+                } else if(sMenu == "support~S")
+                {
+                    if(sMsg == UPMENU)
+                    {
+                        llMessageLinked(LINK_SET,0,"menu",kAv);
+                        iRemenu = FALSE;
+                    } else if(sMsg == "INITIATE")
+                    {
+                        llMessageLinked(LINK_SET,0,"support",kAv);
+                        iRemenu=FALSE;
+                    } else if(sMsg == Checkbox(g_iSupportLockout,"LockOut"))
+                    {
+                        if(iAuth & (C_OWNER|C_SUPPORT)){
+                            g_iSupportLockout=1-g_iSupportLockout;
+                            llMessageLinked(LINK_SET, LM_SETTING_SAVE, "intern_supportlockout=1", "origin");
+                        }
+                    }
+                    
+                    if(iRemenu)SupportSettings(kAv,iAuth);
                 }
                         
             }
@@ -378,6 +411,12 @@ default
             if(sToken == "global"){
                 if(sVar == "verbosity"){
                     g_iVerbosityLevel = (integer)sVal;
+                }
+            }else if(sToken == "intern")
+            {
+                if(sVar == "supportlockout")
+                {
+                    g_iSupportLockout=(integer)sVal;
                 }
             }
             

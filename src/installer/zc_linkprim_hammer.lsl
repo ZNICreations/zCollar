@@ -11,7 +11,7 @@ et al.
 
 
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/zontreck/zCollar
+https://github.com/ZNICreations/zCollar
 */
 
 default
@@ -37,4 +37,3 @@ default
         llRemoveInventory(llGetScriptName());
     }
 }
-

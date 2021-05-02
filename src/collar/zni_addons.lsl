@@ -38,7 +38,6 @@ list g_lBlock;
 list g_lTrust;
 key g_kTempOwner;
 integer g_iPublic;
-integer g_iLimitRange=1;
 
 integer g_iAddons=TRUE;
 integer API_CHANNEL = 0x60b97b5e;

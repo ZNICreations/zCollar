@@ -495,7 +495,14 @@ state active
                 } else if(sVar == "safeworddisable"){
                     g_iSafewordDisable=1;
                 }
+            } else if(sToken == "intern")
+            {
+                if(sVar == "supportlockout")
+                {
+                    g_iSupportLockout = (integer)sVal;
+                }
             }
+            
             
             if(sStr=="settings=sent"){
                 if(g_iStartup){

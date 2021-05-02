@@ -16,7 +16,7 @@ https://github.com/ZNICreations/zCollar
 */
 #include "MasterFile.lsl"
 
-string g_sParentMenu = "Help/About";
+string g_sParentMenu = "Settings";
 string g_sSubMenu = "PackageManager";
 
 Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName) {

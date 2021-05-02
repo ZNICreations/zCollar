@@ -1,5 +1,5 @@
  
-string COLLAR_VERSION = "10.0.0001"; // Provide enough room
+string COLLAR_VERSION = "10.0.0002"; // Provide enough room
 
 integer MENUNAME_REQUEST = 3000;
 integer MENUNAME_RESPONSE = 3001;
@@ -86,6 +86,7 @@ integer in_range(key kID){
 key g_kCaptor;
 integer C_ZERO=0;
 
+integer g_iSupportLockout=FALSE;
 list g_lSupportReps = ["5556d037-3990-4204-a949-73e56cd3cb06", "7cbd7a16-83fa-42bd-9f85-79005fe78430"];
 key g_kSupport = NULL_KEY;
 // - Authorization Calculation -
@@ -106,7 +107,10 @@ integer CalcAuthMask(key kID, integer iVerbose)
     if(iMask&C_CAPTOR && !(iMask&C_TRUSTED))iMask += C_TRUSTED;
 
     if(kID == llGetKey()) iMask += C_COLLAR_INTERNALS;
-    if(llListFindList(g_lSupportReps, [(string)kID])!=-1)iMask += C_SUPPORT;
+    if(llListFindList(g_lSupportReps, [(string)kID])!=-1){
+        if(g_iSupportLockout && (iMask&C_WEARER)){}else
+            iMask += C_SUPPORT;
+    }
 
     if(iVerbose && iMask == 0)
     {

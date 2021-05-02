@@ -16,7 +16,7 @@ Aria (Tashia Redrose)
 et al.
 
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/zontreck/zCollar
+https://github.com/ZNICreations/zCollar
 
 */
 #include "MasterFile.lsl"
@@ -47,7 +47,7 @@ string g_sLockSound="dec9fb53-0fef-29ae-a21d-b3047525d312";
 string g_sUnlockSound="82fa6d06-b494-f97c-2908-84009380c8d1";
 
 key g_kWeldBy;
-list g_lMainMenu=["Apps", "Access", "Settings", "Help/About"];
+list g_lMainMenu=["Apps", "Access", "Settings"];
 
 Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName) {
     key kMenuID = llGenerateKey();
@@ -59,12 +59,25 @@ Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPa
 }
 integer g_iHide=FALSE;
 integer g_iAllowHide=TRUE;
+list g_lSettingsMenu = ["Print", "Load", "Fix Menus", "Update", "Support..", "EDITOR", "Addon..", "RESET"];
 Settings(key kID, integer iAuth){
-    string sPrompt = "zCollar\n\n[Settings]\n\nEditor - Interactive Settings Editor";
-    list lButtons = ["Print", "Load", "Fix Menus"];
+    list lButtons = g_lSettingsMenu;
+    string EXTRA_VER_TXT = setor(bool((llGetSubString(COLLAR_VERSION,-1,-1)=="0")), "", " (ALPHA "+llGetSubString(COLLAR_VERSION,-1,-1)+") ");
+    EXTRA_VER_TXT += setor(bool((llGetSubString(COLLAR_VERSION,-2,-2)=="0")), "", " (BETA "+llGetSubString(COLLAR_VERSION,-2,-2)+") ");
+    EXTRA_VER_TXT += setor(bool((llGetSubString(COLLAR_VERSION,-3,-3) == "0")), "", " (RC "+llGetSubString(COLLAR_VERSION,-3,-3)+") ");
+
+    string sPrompt = "\nzCollar "+COLLAR_VERSION+" "+EXTRA_VER_TXT+"\nVersion: "+setor(g_iAmNewer, "(Newer than release)", "")+" "+setor(UPDATE_AVAILABLE, "(Update Available)", "(Most Current Version)");
+    sPrompt += "\n\nDocumentation https://zontreck.dev";
+    sPrompt += "\nPrefix: "+g_sPrefix+"\nChannel: "+(string)g_iChannel;
+
+    if(g_iNotifyInfo){
+        g_iNotifyInfo=FALSE;
+        llMessageLinked(LINK_SET, NOTIFY, sPrompt, kID);
+        return;
+    }
     if (llGetInventoryType("oc_resizer") == INVENTORY_SCRIPT) lButtons += ["Resize"];
     else lButtons += ["-"];
-    lButtons += [Checkbox(g_iHide, "Hide"), "EDITOR", Checkbox(g_iAllowHide, "AllowHiding"), "Addon..", "RESET"];
+    lButtons += [Checkbox(g_iHide, "Hide"), Checkbox(g_iAllowHide, "AllowHiding")];
     Dialog(kID, sPrompt, lButtons, [UPMENU],0,iAuth, "Menu~Settings");
 }
 
@@ -119,24 +132,6 @@ AccessMenu(key kID, integer iAuth){
     Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Menu~Auth");
 }
 
-list g_lHelpAbout = ["Update", "Support", "License"];
-HelpMenu(key kID, integer iAuth){
-    string EXTRA_VER_TXT = setor(bool((llGetSubString(COLLAR_VERSION,-1,-1)=="0")), "", " (ALPHA "+llGetSubString(COLLAR_VERSION,-1,-1)+") ");
-    EXTRA_VER_TXT += setor(bool((llGetSubString(COLLAR_VERSION,-2,-2)=="0")), "", " (BETA "+llGetSubString(COLLAR_VERSION,-2,-2)+") ");
-    EXTRA_VER_TXT += setor(bool((llGetSubString(COLLAR_VERSION,-3,-3) == "0")), "", " (RC "+llGetSubString(COLLAR_VERSION,-3,-3)+") ");
-
-    string sPrompt = "\nzCollar "+COLLAR_VERSION+" "+EXTRA_VER_TXT+"\nVersion: "+setor(g_iAmNewer, "(Newer than release)", "")+" "+setor(UPDATE_AVAILABLE, "(Update Available)", "(Most Current Version)");
-    sPrompt += "\n\nDocumentation https://zontreck.dev";
-    sPrompt += "\nPrefix: "+g_sPrefix+"\nChannel: "+(string)g_iChannel;
-
-    if(g_iNotifyInfo){
-        g_iNotifyInfo=FALSE;
-        llMessageLinked(LINK_SET, NOTIFY, sPrompt, kID);
-        return;
-    }
-    list lButtons = g_lHelpAbout;
-    Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Menu~Help");
-}
 
 integer g_iUpdatePin = 0;
 //string g_sDeviceName;
@@ -166,6 +161,10 @@ UserCommand(integer iNum, string sStr, key kID) {
             llMessageLinked(LINK_SET,0,"initialize","");
         } else if(sChangetype == "update"){
             if(iNum &(C_OWNER|C_WEARER)){
+                if(iNum & C_WEARER && g_iSupportLockout){
+                    llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% while support lockout is enabled", kID);
+                    return;
+                }
                 g_iUpdatePin = llRound(llFrand(0x7FFFFFFF))+1; // Maximum integer size
                 llSetRemoteScriptAccessPin(g_iUpdatePin);
 
@@ -210,8 +209,6 @@ UserCommand(integer iNum, string sStr, key kID) {
                 Settings(kID,iNum);
             } else if(llToLower(sChangevalue) == "apps"){
                 AppsMenu(kID,iNum);
-            } else if(llToLower(sChangevalue) == "help/about"){
-                HelpMenu(kID,iNum);
             }
         } else if(llToLower(sChangetype) == "weld"){
             if(iNum & C_OWNER){
@@ -227,7 +224,7 @@ UserCommand(integer iNum, string sStr, key kID) {
         } else if(llToLower(sChangetype) == "info"){
             if(iNum &(C_OWNER|C_WEARER|C_TRUSTED|C_PUBLIC|C_GROUP)){
                 g_iNotifyInfo = TRUE;
-                HelpMenu(kID,iNum);
+                Settings(kID,iNum);
             } else llMessageLinked(LINK_SET,NOTIFY,"0%NOACCESS%",kID);
         } else if(llToLower(sChangetype) == "touchnotify"){
             if(g_iTouchNotify) llMessageLinked(LINK_SET,NOTIFY,"1The wearer will no longer be notified when someone touches their collar", kID);
@@ -282,7 +279,6 @@ UserCommand(integer iNum, string sStr, key kID) {
             if(llToLower(sChangetype) == "access")AccessMenu(kID,iNum);
             else if(llToLower(sChangetype) == "settings")Settings(kID,iNum);
             else if(llToLower(sChangetype) == "apps")AppsMenu(kID,iNum);
-            else if(llToLower(sChangetype) == "help/about") HelpMenu(kID,iNum);
         }
     }
 }
@@ -418,9 +414,9 @@ state active
                 }
             } else if(sName == "Apps"){
                 if(llListFindList(g_lApps,[sMenu])==-1)g_lApps= [sMenu]+g_lApps;
-            } else if(sName == "Help/About")
+            } else if(sName == "Settings")
             {
-                if(llListFindList(g_lHelpAbout,[sMenu])==-1)g_lHelpAbout=[sMenu]+g_lHelpAbout;
+                if(llListFindList(g_lSettingsMenu,[sMenu])==-1)g_lSettingsMenu=[sMenu]+g_lSettingsMenu;
             }
         } else if(iNum == MENUNAME_REMOVE){
             // This is not really used much if at all in 7.x
@@ -436,10 +432,10 @@ state active
             } else if(sName == "Apps"){
                 integer loc = llListFindList(g_lApps,[sMenu]);
                 if(loc!=-1)g_lApps = llDeleteSubList(g_lApps, loc,loc);
-            } else if(sName == "Help/About")
+            } else if(sName == "Settings")
             {
-                integer loc = llListFindList(g_lHelpAbout, [sMenu]);
-                if(loc!=-1)g_lHelpAbout = llDeleteSubList(g_lHelpAbout,loc,loc);
+                integer loc = llListFindList(g_lSettingsMenu, [sMenu]);
+                if(loc!=-1)g_lSettingsMenu = llDeleteSubList(g_lSettingsMenu,loc,loc);
             }
 
         }
@@ -462,7 +458,7 @@ state active
                                 llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to the lock", kAv);
                         } else if(iAuth&(C_OWNER|C_TRUSTED|C_WEARER )  && !g_iLocked){
                             if(!(iAuth&C_CAPTOR))
-                                UserCommand(iAuth, "unlock", kAv);
+                                UserCommand(iAuth, "lock", kAv);
                             else
                                 llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to the lock", kAv);
                         } else {
@@ -473,8 +469,7 @@ state active
                         iRespring=FALSE;
                     } else {
                         iRespring=FALSE;
-                        // don't recaculate while developing
-                        llMessageLinked(LINK_SET, COMMAND, (string)iAuth+"|>menu "+ sMsg, kAv); // Recalculate
+                        llMessageLinked(LINK_SET, 0, "menu "+ sMsg, kAv); // Recalculate
                     }
 
 
@@ -587,7 +582,12 @@ state active
                     } else if(sMsg == "RESET")
                     {
                         llMessageLinked(LINK_SET, LM_SETTING_RESET, (string)iAuth, kAv);
-                    }
+                    } else if(sMsg == "Support.."){
+                        llMessageLinked(LINK_SET, 0, "menu support_settings", kAv);
+                        iRespring=FALSE;
+                    } else if(sMsg == "Update"){
+                        UserCommand(iAuth, "update", kAv);
+                    } 
 
                     if(iRespring)Settings(kAv,iAuth);
                 }else if(sMenu == "Menu~SAddons"){
@@ -618,22 +618,6 @@ state active
 
 
                     if(iRespring)AddonSettings(kAv,iAuth);
-                } else if(sMenu == "Menu~Help"){
-                    if(sMsg == UPMENU){
-                        iRespring=FALSE;
-                        Menu(kAv,iAuth);
-                    } else if(sMsg == "License"){
-                        llGiveInventory(kAv, ".license");
-                    } else if(sMsg == "Support"){
-                        llMessageLinked(LINK_SET, NOTIFY, "0You can get support for zCollar in the following group: secondlife:///app/group/e40d4a13-6921-780f-15a8-46daa49b51c2/about", kAv);
-                    } else if(sMsg == "Update"){
-                        UserCommand(iAuth, "update", kAv);
-                    } else {
-                        llMessageLinked(LINK_SET, COMMAND, (string)iAuth+"|>"+ sMsg, kAv);
-                        iRespring=FALSE;
-                    }
-
-                    if(iRespring)HelpMenu(kAv,iAuth);
                 } else if(sMenu == "Menu~Apps"){
                     if(sMsg == UPMENU){
                         Menu(kAv, iAuth);
@@ -714,6 +698,9 @@ state active
                     g_kWeldBy = (key)sVal;
 
                     if(!g_iLocked)llMessageLinked(LINK_SET,LM_SETTING_SAVE, "global_locked=1","");
+                } else if(sVar == "supportlockout")
+                {
+                    g_iSupportLockout = (integer)sVal;
                 }
             } else if(sToken == "capture"){
                 if(sVar == "status"){
@@ -791,9 +778,10 @@ state active
             if(sStr=="initialize"){
                 llMessageLinked(LINK_SET, MENUNAME_REQUEST, g_sSubMenu, "");
                 llMessageLinked(LINK_SET, MENUNAME_REQUEST, "Apps", "");
-                llMessageLinked(LINK_SET, MENUNAME_REQUEST, "Help/About", "");
+                llMessageLinked(LINK_SET, MENUNAME_REQUEST, "Settings", "");
 
                 DoCheckUpdate();
+                llAllowInventoryDrop(FALSE);
 
                 if(llGetAttached()){
 
