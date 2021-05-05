@@ -587,7 +587,10 @@ state active
                         iRespring=FALSE;
                     } else if(sMsg == "Update"){
                         UserCommand(iAuth, "update", kAv);
-                    } 
+                    } else {
+                        llMessageLinked(LINK_SET, 0, "menu "+sMsg, kAv);
+                        iRespring=FALSE;
+                    }
 
                     if(iRespring)Settings(kAv,iAuth);
                 }else if(sMenu == "Menu~SAddons"){

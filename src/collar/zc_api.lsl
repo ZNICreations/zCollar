@@ -237,15 +237,13 @@ UserCommand(integer iAuth, string sCmd, key kID){
     }
     
     if(iAuth & (C_OWNER|C_WEARER)){
-        integer not_wearer = FALSE;
-        if(!iAuth&C_WEARER)not_wearer=TRUE;
-        if(sCmd == "safeword-disable" && not_wearer)g_iSafewordDisable=TRUE;
-        else if(sCmd == "safeword-enable" && not_wearer)g_iSafewordDisable=FALSE;
+        if(sCmd == "safeword-disable" && iAuth&C_OWNER)g_iSafewordDisable=TRUE;
+        else if(sCmd == "safeword-enable" && iAuth&C_OWNER)g_iSafewordDisable=FALSE;
             
         list lCmd = llParseString2List(sCmd, [" "],[]);
         string sCmdx = llToLower(llList2String(lCmd,0));
                 
-        if(sCmdx == "channel" && not_wearer){
+        if(sCmdx == "channel" && iAuth&C_OWNER){
             g_iChannel = (integer)llList2String(lCmd,1);
             llMessageLinked(LINK_SET, LM_SETTING_SAVE, "global_channel="+(string)g_iChannel, kID);
         }else if(sCmdx == "endsupport")
@@ -257,7 +255,7 @@ UserCommand(integer iAuth, string sCmd, key kID){
                 g_kSupport=NULL;
                 llMessageLinked(LINK_SET, DIALOG_EXPIRE_ALL, "", "");
             }
-        } else if(sCmdx == "prefix" && not_wearer){
+        } else if(sCmdx == "prefix" && iAuth&C_OWNER){
             if(llList2String(lCmd,1)==""){
                 llMessageLinked(LINK_SET,NOTIFY,"0The prefix is currently set to: "+g_sPrefix+". If you wish to change it, supply the new prefix to this same command", kID);
                 return;
@@ -274,7 +272,7 @@ UserCommand(integer iAuth, string sCmd, key kID){
             if(sCmdx=="add")
                 g_iMode = ACTION_ADD;
             else g_iMode=ACTION_REM;
-            if(sType == "owner" && not_wearer)g_iMode = g_iMode|ACTION_OWNER;
+            if(sType == "owner" && iAuth&C_OWNER)g_iMode = g_iMode|ACTION_OWNER;
             else if(sType == "trust")g_iMode = g_iMode|ACTION_TRUST;
             else if(sType == "block")g_iMode=g_iMode|ACTION_BLOCK;
             else return; // Invalid, don't continue
@@ -286,7 +284,7 @@ UserCommand(integer iAuth, string sCmd, key kID){
                     llSensor("", "", AGENT, 20, PI);
                 } else {
                     list lOpts;
-                    if(sType == "owner" && not_wearer)lOpts=g_lOwner;
+                    if(sType == "owner" && iAuth&C_OWNER)lOpts=g_lOwner;
                     else if(sType == "trust")lOpts=g_lTrust;
                     else if(sType == "block")lOpts=g_lBlock;
                     else return; // deny adding for unknown type
@@ -298,6 +296,12 @@ UserCommand(integer iAuth, string sCmd, key kID){
                 UpdateLists((key)sID, kID);
             }
         } 
+    }
+    if(sCmd == "print auth"){
+         if(iAuth &(C_OWNER|C_TRUSTED|C_WEARER))
+            PrintAccess(kID);
+        else
+            llMessageLinked(LINK_SET,NOTIFY, "0%NOACCESS% to printing access lists!", kID);
     }
     if (iAuth &(C_WEARER|C_TRUSTED|C_PUBLIC|C_GROUP|C_BLOCKED)) return;
     if (iAuth &C_COLLAR_INTERNALS && sCmd == "runaway") {
@@ -314,12 +318,6 @@ UserCommand(integer iAuth, string sCmd, key kID){
             
     }
     
-     if(sCmd == "print auth"){
-         if(iAuth &(C_OWNER|C_TRUSTED|C_WEARER))
-            PrintAccess(kID);
-        else
-            llMessageLinked(LINK_SET,NOTIFY, "0%NOACCESS% to printing access lists!", kID);
-    }
 }
  
 SW(){
