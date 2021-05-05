@@ -22,6 +22,19 @@ integer REPLY_FOLDER_LOCKS = -9101;
 integer SET_FOLDER_LOCK = -9102;
 integer CLEAR_FOLDER_LOCKS = -9103;
 
+integer SUMMON_PARTICLES = -58931; // Used only for cuffs to summon particles from one NAMED leash point to another NAMED anchor point
+// SUMMON_PARTICLES should follow this message format: <From Name>|<To Name>|<Age>|<Gravity>
+integer QUERY_POINT_KEY = -58932;
+// This query is automatically triggered and the REPLY signal immediately spawns in particles via the SetParticles function
+// Replies to this query are posted on the REPLY_POINT_KEY
+// Message format for QUERY is: <Name>       | kID identifier
+integer REPLY_POINT_KEY = -58933;
+// Reply format: <kID identifier>       |kID  <Key>
+integer CLEAR_ALL_CHAINS = -58934;
+integer STOP_CUFF_POSE = -58935; // <-- stops all active animations originating from this cuff
+integer DESUMMON_PARTICLES = -58936; // Message only includes the From point name
+
+
 integer NOTIFY = 1002;
 integer NOTIFY_OWNERS=1003;
 
