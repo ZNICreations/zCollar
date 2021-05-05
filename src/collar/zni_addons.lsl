@@ -92,7 +92,7 @@ AddonsMenu(key kID, integer iAuth){
             lOpts += llList2String( g_lAddons, i+1 );
         }
     }
-    Dialog(kID, "[Addons]\n\nThese are addons you have worn, or rezzed that are compatible with OpenCollar and have requested collar access", lOpts, [UPMENU],0,iAuth,"addons");
+    Dialog(kID, "[Addons]\n\nThese are addons you have worn, or rezzed that are compatible with zCollar and have requested collar access", lOpts, [UPMENU],0,iAuth,"addons");
 }
 
 UserCommand(integer iNum, string sStr, key kID) {
@@ -128,10 +128,10 @@ integer g_iPendingNoMenu;
 string g_sPendingAddonOptin;
 integer g_iWearerAddons=TRUE;
 SayToAddon(string pkt, integer iNum, string sStr, key kID){
-    llRegionSay(API_CHANNEL, llList2Json(JSON_OBJECT, ["addon_name", "OpenCollar", "pkt_type", pkt, "iNum", iNum, "sMsg", sStr, "kID", kID]));
+    llRegionSay(API_CHANNEL, llList2Json(JSON_OBJECT, ["addon_name", "zCollar", "pkt_type", pkt, "iNum", iNum, "sMsg", sStr, "kID", kID]));
 }
 SayToAddonX(key k, string pkt, integer iNum, string sStr, key kID){
-    llRegionSayTo(k, API_CHANNEL, llList2Json(JSON_OBJECT, ["addon_name", "OpenCollar", "pkt_type", pkt, "iNum", iNum, "sMsg", sStr, "kID", kID]));
+    llRegionSayTo(k, API_CHANNEL, llList2Json(JSON_OBJECT, ["addon_name", "zCollar", "pkt_type", pkt, "iNum", iNum, "sMsg", sStr, "kID", kID]));
 }
 list g_lAddons;
 key g_kAddonPending;

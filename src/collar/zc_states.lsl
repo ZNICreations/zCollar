@@ -84,7 +84,7 @@ SupportSettings(key kID, integer iAuth)
 
 SupportMenu(key kID, integer iAuth)
 {
-    Dialog(kID, "[ZNI Support]\n \n* CAUTION IS ADVISED *\n\n> Reformat \t\t- Erases all settings\n> END \t\t- End Support", ["Reformat", "END", "Unleash"], [UPMENU], 0, iAuth, "support");
+    Dialog(kID, "[ZNI Support]\n \n* CAUTION IS ADVISED *\n\n> Reformat \t\t- Erases all settings\n> END \t\t- End Support", ["Reformat", "END", "Unleash", "Unweld"], [UPMENU], 0, iAuth, "support");
 }
 
 list setor(integer test, list a, list b){
@@ -373,6 +373,9 @@ default
                     } else if(sMsg == "Unleash")
                     {
                         llMessageLinked(LINK_SET, COMMAND, (string)C_COLLAR_INTERNALS+"|>unleash", kAv);
+                    } else if(sMsg == "Unweld")
+                    {
+                        llMessageLinked(LINK_SET, LM_SETTING_DELETE, "intern_weld", kAv);
                     }
                     
                     if(iRemenu)SupportMenu(kAv,iAuth);
@@ -390,7 +393,7 @@ default
                     {
                         if(iAuth & (C_OWNER|C_SUPPORT)){
                             g_iSupportLockout=1-g_iSupportLockout;
-                            llMessageLinked(LINK_SET, LM_SETTING_SAVE, "intern_supportlockout=1", "origin");
+                            llMessageLinked(LINK_SET, LM_SETTING_SAVE, "intern_supportlockout="+(string)g_iSupportLockout, "origin");
                         }
                     }
                     
