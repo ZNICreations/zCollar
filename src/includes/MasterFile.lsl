@@ -117,7 +117,7 @@ integer CalcAuthMask(key kID, integer iVerbose)
         llMessageLinked(LINK_SET,NOTIFY, "0%NOACCESS%", kID);
     }
 
-    if(iMask == C_WEARER){
+    if(iMask & C_WEARER){
         if(g_lOwner == [] && g_lTrust==[] && llListFindList(g_lBlock, [(string)g_kWearer])==-1)iMask+=C_OWNER;
     }
     return iMask;
