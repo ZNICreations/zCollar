@@ -220,7 +220,10 @@ Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPa
 string SLURL(key kID){
     return "secondlife:///app/agent/"+(string)kID+"/about";
 }
-
+string OSLURL(key kID)
+{
+    return "secondlife:///app/object/"+(string)kID+"/inspect";
+}
 
 list StrideOfList(list src, integer stride, integer start, integer end)
 {

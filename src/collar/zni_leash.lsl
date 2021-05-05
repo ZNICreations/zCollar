@@ -21,7 +21,7 @@ https://github.com/ZNICreations/zCollar
 string g_sParentMenu = "Main";
 string g_sSubMenu = "Leash";
 
-
+integer g_iVerbosity=1;
 key g_kLeashedTo;
 
 Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName) {
@@ -35,17 +35,27 @@ Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPa
 
 Menu(key kID, integer iAuth) {
     string sPrompt = "\n[zCollar Leash]";
-    list lButtons = ["Unleash", "Length", "Yank", "Grab", "Give Holder", "Configure"];
+    list lButtons = [ "Length", "Yank", "Give Holder", "Configure", "Tie"];
+    if(g_iLeashed)lButtons += ["Unleash"];
+    else lButtons += ["Grab"];
     Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Menu~Main");
 }
 
 ConfigMenu(key kID, integer iAuth)
 {
     string sPrompt = "\n[zCollar Leash Config]\n\nCurrent Texture: "+g_sParticleTexture;
-    list lButtons = [Checkbox((g_sParticleMode=="Ribbon"), "Ribbon"), Checkbox(g_iTurnMode, "Turn"), Checkbox((g_sParticleTexture=="Silk"), "Silk"), Checkbox((g_sParticleTexture=="Chain"), "Chain"), Checkbox((g_sParticleTexture=="Leather"),"Leather"), Checkbox((g_sParticleTexture=="Rope"),"Rope")];
-    Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Menu~Config");
+    list lButtons = [Checkbox((g_sParticleMode=="Ribbon"), "Ribbon"), Checkbox(g_iTurnMode, "Turn"), Checkbox((g_sParticleTexture=="Silk"), "Silk"), Checkbox((g_sParticleTexture=="Chain"), "Chain"), Checkbox((g_sParticleTexture=="Leather"),"Leather"), Checkbox((g_sParticleTexture=="Rope"),"Rope"), Checkbox(g_iNoLeash, "Invisible"), Checkbox(g_iParticleGlow, "Glow")];
+    Dialog(kID, sPrompt, lButtons, ["Color", UPMENU], 0, iAuth, "Menu~Config");
 }
 
+string UnCheckbox(string sBox)
+{
+    // Return only the checkbox label
+    integer index = llSubStringIndex(sBox," ");
+    return llGetSubString(sBox,index+1,-1);
+}
+
+integer g_iNoLeash=FALSE;
 integer g_iLeashed = FALSE;
 integer g_iLeashedAuth = 0;
 integer g_iLeashTarget;
@@ -59,7 +69,6 @@ integer g_iAwayCounter=-1;
 
 UserCommand(integer iNum, string sStr, key kID) {
     if(!(iNum&(C_OWNER|C_TRUSTED|C_WEARER|C_GROUP|C_PUBLIC)))return; // This example plugin limits menu and command access to owner, trusted, and wearer
-    if (llSubStringIndex(llToLower(sStr),llToLower(g_sSubMenu)) && llToLower(sStr) != "menu "+llToLower(g_sSubMenu)) return;
     if (iNum & C_COLLAR_INTERNALS && llToLower(sStr) == "runaway") {
         g_lOwner=[];
         g_lTrust=[];
@@ -74,6 +83,9 @@ UserCommand(integer iNum, string sStr, key kID) {
         string sChangevalue = llList2String(llParseString2List(sStr, [" "], []),1);
         //string sText;
         /// [prefix] g_sSubMenu sChangetype sChangevalue
+        if(g_iVerbosity>=3){
+            llRegionSayTo(kID, 0, "Leash commandline: "+sStr);
+        }
         if(sChangetype == "unleash")
         {
             if(MaskOutranks(iNum, g_iLeashedAuth)){
@@ -86,6 +98,8 @@ UserCommand(integer iNum, string sStr, key kID) {
                     g_iLeashedAuth = 0;
                     llMessageLinked(LINK_SET, LM_SETTING_DELETE, "leash_leashedto", "");
                     llMessageLinked(LINK_SET, LM_SETTING_DELETE, "leash_leashedauth", "");
+                    
+                    llMessageLinked(LINK_SET, NOTIFY, "1%WEARERNAME% has been unleashed by "+SLURL(kID), kID);
                 }
                 
             }
@@ -94,11 +108,14 @@ UserCommand(integer iNum, string sStr, key kID) {
             if(MaskOutranks(iNum, g_iLeashedAuth)){
                 llMessageLinked(LINK_SET, LM_SETTING_SAVE, "leash_length="+sChangevalue, "");
                 g_fLength = (float)sChangevalue;
+                llMessageLinked(LINK_SET, NOTIFY, "1Leash length now set to "+(string)g_fLength,kID);
             }
         } else if(sChangetype == "yank")
         {
             if(MaskOutranks(iNum, g_iLeashedAuth) && g_iLeashed){
                 YankTo(kID);
+                llMessageLinked(LINK_SET, NOTIFY, "0You yank %WEARERNAME%'s leash", kID);
+                llMessageLinked(LINK_SET, NOTIFY, "0"+SLURL(kID)+" yanks your leash", g_kWearer);
             }
         } else if(sChangetype == "leash" || sChangetype == "grab")
         {
@@ -106,10 +123,30 @@ UserCommand(integer iNum, string sStr, key kID) {
             {
                 g_iFollowMode=FALSE;
                 Leash(kID, iNum, TRUE);
+                llMessageLinked(LINK_SET, NOTIFY, "0You grab %WEARERNAME%'s leash", kID);
+                llMessageLinked(LINK_SET, NOTIFY, "0Your leash was grabbed by "+SLURL(kID), g_kWearer);
             }
         } else if(sChangetype == "holder")
         {
             llGiveInventory(kID, g_sLeashHolder);
+        } else if(sChangetype == "tie")
+        {
+            // Anchor to a post
+            if(MaskOutranks(iNum, g_iLeashedAuth))
+            {
+                g_iFollowMode = FALSE;
+                llMessageLinked(LINK_SET, NOTIFY, "0You take %WEARERNAME%'s leash and tie it to "+OSLURL(sChangevalue), kID);
+                Leash((key)sChangevalue, iNum, TRUE);
+                llMessageLinked(LINK_SET, NOTIFY, "0Your leash was tied to "+OSLURL(sChangevalue),g_kWearer);
+            } else llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to tie the leash to a post", kID);
+        } else if(sChangetype == "pass")
+        {
+            if(MaskOutranks(iNum, g_iLeashedAuth))
+            {
+                llMessageLinked(LINK_SET, NOTIFY, "1Asking "+SLURL(sChangevalue)+" to accept %WEARERNAME%'s leash", kID);
+                // Ask user to accept leash
+                llMessageLinked(LINK_SET, AUTH_REQUEST, "pass_leash", sChangevalue);
+            } else llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to passing the leash", kID);
         }
     }
 }
@@ -184,16 +221,21 @@ ScanParticlePoints()
     g_lChainPoints=[];
     integer i=0;
     integer end = llGetNumberOfPrims();
-    for(i=0;i<end;i++)
+    for(i=LINK_ROOT;i<=end;i++)
     {
         string name = llGetLinkName(i);
-        string desc = llList2String(llGetLinkPrimitiveParams(i, [OBJECT_DESC]),0);
+        string desc = llList2String(llGetLinkPrimitiveParams(i, [PRIM_DESC]),0);
         list lPar = llParseString2List(desc, ["~"],[]);
         integer index = llListFindList(lPar,["chainpoint"]);
         if(index!=-1)
         {
             g_lChainPoints += [ i, llList2String(lPar,index+1) ];
         } 
+    }
+    
+    if(g_iVerbosity>=2)
+    {
+        llMessageLinked(LINK_SET, NOTIFY, "0Chainpoint scan completed: "+llDumpList2String(g_lChainPoints,"~"), g_kWearer);
     }
 }
 WipeAllChains()
@@ -266,6 +308,9 @@ Particles(integer iLink, key kParticleTarget, vector vScale) {
         ];
     llLinkParticleSystem(iLink, lTemp);
 }
+key g_kTempMenuUser;
+integer g_iTempMenuUser;
+
 
 default
 {
@@ -298,6 +343,22 @@ state active
         ScanParticlePoints();
         WipeAllChains();
     }
+    no_sensor()
+    {
+        Dialog(g_kTempMenuUser, "\n[zCollar Leash Post Scan]\n\n> No objects found nearby that you can be leashed to", [], [UPMENU],0,g_iTempMenuUser, "leash~post");
+    }
+    
+    sensor(integer n)
+    {
+        list lButtons;
+        integer i=0;
+        for(i=0;i<n;i++)
+        {
+            lButtons += llDetectedKey(i);
+        }
+        
+        Dialog(g_kTempMenuUser, "\n[zCollar Leash Post Scan]\n\n", lButtons, [UPMENU],0,g_iTempMenuUser, "leash~post");
+    }
     link_message(integer iSender,integer iNum,string sStr,key kID){
         if(iNum == COMMAND) {
             list lTmp = llParseString2List(sStr,["|>"],[]);
@@ -317,7 +378,7 @@ state active
                 string sMsg = llList2String(lMenuParams,1);
                 integer iAuth = llList2Integer(lMenuParams,3);
                 
-                integer iRespring = FALSE;
+                integer iRespring = TRUE;
                 
                 if(sMenu == "Menu~Main"){
                     if(sMsg == UPMENU) {
@@ -343,6 +404,12 @@ state active
                     {
                         ConfigMenu(kAv,iAuth);
                         iRespring=FALSE;
+                    } else if(sMsg == "Tie")
+                    {
+                        g_kTempMenuUser = kAv;
+                        g_iTempMenuUser = iAuth;
+                        llSensor("","",SCRIPTED|PASSIVE,20,PI);
+                        iRespring=FALSE;
                     }
                     
                     
@@ -359,10 +426,61 @@ state active
                     {
                         Menu(kAv,iAuth);
                         iRespring=FALSE;
+                    } else if(sMsg == Checkbox(g_iTurnMode, "Turn"))
+                    {
+                        g_iTurnMode=1-g_iTurnMode;
+                        llMessageLinked(LINK_SET, LM_SETTING_SAVE, "leash_turn="+(string)g_iTurnMode,"");
+                    } else if(UnCheckbox(sMsg) == "Ribbon"){
+                        llMessageLinked(LINK_SET, LM_SETTING_SAVE, "leash_texture=Silk","");
+                    }else if(UnCheckbox(sMsg) == "Chain")
+                    {
+                        g_sParticleTexture = "Chain";
+                        llMessageLinked(LINK_SET, LM_SETTING_SAVE, "leash_texture="+g_sParticleTexture,"");
+                    } else if(UnCheckbox(sMsg) == "Leather")
+                    {
+                        llMessageLinked(LINK_SET, LM_SETTING_SAVE, "leash_texture=Leather","");
+                    } else if(UnCheckbox(sMsg) == "Rope")
+                    {
+                        llMessageLinked(LINK_SET, LM_SETTING_SAVE, "leash_texture=Rope","");
+                    } else if(sMsg == Checkbox(g_iNoLeash, "Invisible"))
+                    {
+                        g_iNoLeash=1-g_iNoLeash;
+                        llMessageLinked(LINK_SET, LM_SETTING_SAVE, "leash_invis="+(string)g_iNoLeash,"");
+                    } else if(sMsg == Checkbox(g_iParticleGlow, "Glow")){
+                        g_iParticleGlow=1-g_iParticleGlow;
+                        llMessageLinked(LINK_SET, LM_SETTING_SAVE, "leash_glow="+(string)g_iParticleGlow,"");
+                    } else if(sMsg == "Color")
+                    {
+                        Dialog(kAv, "[zCollar Leash Color]", ["colormenu please"],[], 0, iAuth, "leash~color");
+                        iRespring = FALSE;
                     }
                     
                     
                     if(iRespring)ConfigMenu(kAv,iAuth);
+                } else if(sMenu == "leash~post")
+                {
+                    if(sMsg == UPMENU)
+                    {
+                        Menu(kAv,iAuth);
+                        return;
+                    }else {
+                        UserCommand(iAuth, "tie "+sMsg, kAv);
+                        Menu(kAv,iAuth);
+                    }
+                } else if(sMenu == "leash~pass")
+                {
+                    if(sMsg == "No")
+                    {
+                        return;
+                    }else if(sMsg == "Yes")
+                    {
+                        g_iLeashedAuth = 0;
+                        UserCommand(iAuth, "grab", kAv);
+                    }
+                } else if(sMenu == "leash~color")
+                {
+                    llMessageLinked(LINK_SET, LM_SETTING_SAVE, "leash_color="+sMsg, "");
+                    ConfigMenu(kAv,iAuth);
                 }
             }
         } else if (iNum == DIALOG_TIMEOUT) {
@@ -374,12 +492,15 @@ state active
             string sToken = llList2String(lSettings,0);
             string sVar = llList2String(lSettings,1);
             string sVal = llList2String(lSettings,2);
+            integer iUpdateParticles=FALSE;
+            
             
             if(sToken=="leash"){
                 if(sVar=="leashedto"){
                     // Start Particles. The particles will be updated with new parameters as they get received.
                     g_kLeashedTo = (key)sVal;
                     g_iLeashed=TRUE;
+                    iUpdateParticles=TRUE;
                     
                 } else if(sVar == "leashedauth")
                 {
@@ -387,12 +508,44 @@ state active
                 } else if(sVar == "length")
                 {
                     SetLength((float)sVal);
+                } else if(sVar == "turn")
+                {
+                    g_iTurnMode = (integer)g_iTurnMode;
+                } else if(sVar == "texture")
+                {
+                    iUpdateParticles=TRUE;
+                    g_sParticleTexture = sVal;
+                    if(g_sParticleTexture!="Silk")g_sParticleMode="Normal";
+                    else g_sParticleMode="Ribbon";
+                } else if(sVar == "invis")
+                {
+                    g_iNoLeash = (integer)sVal;
+                    if(g_iNoLeash){
+                        g_sParticleTexture="none";
+                        g_sLeashParticleMode="noParticle";
+                    }
+                    else g_sLeashParticleMode="";
+                    iUpdateParticles=TRUE;
+                } else if(sVar == "glow")
+                {
+                    g_iParticleGlow = (integer)sVal;
+                    iUpdateParticles=TRUE;
+                } else if(sVar == "color")
+                {
+                    g_vLeashColor = (vector)sVal;
+                    iUpdateParticles=TRUE;
                 }
+                
+                
+                if(iUpdateParticles)llMessageLinked(LINK_SET, SUMMON_PARTICLES, "collarfront", g_kLeashedTo);
             } else if(sToken == "global")
             {
                 if(sVar == "checkboxes")
                 {
                     g_lCheckboxes = llParseString2List(sVal, [","],[]);
+                } else if(sVar == "verbosity")
+                {
+                    g_iVerbosity = (integer)sVal;
                 }
             }
             
@@ -400,6 +553,7 @@ state active
             
             if(sStr == "settings=sent")
             {
+                ScanParticlePoints();
                 Leash(g_kLeashedTo, g_iLeashedAuth, FALSE);
             }
         } else if(iNum == REBOOT)
@@ -407,9 +561,10 @@ state active
             llResetScript();
         }else if(iNum == QUERY_POINT_KEY)
         {
-            if(llListFindList(g_lChainPoints, [sStr])!=-1)
+            integer iIndex=llListFindList(g_lChainPoints, [sStr]);
+            if(iIndex!=-1)
             {
-                llMessageLinked(LINK_SET, REPLY_POINT_KEY, kID, "");
+                llMessageLinked(LINK_SET, REPLY_POINT_KEY, kID, llGetLinkKey(llList2Integer(g_lChainPoints,iIndex-1)));
             }
         } else if(iNum == REPLY_POINT_KEY)
         {
@@ -421,18 +576,34 @@ state active
                 if(iIndex == -1 )return;
                 integer iPrim = llList2Integer(g_lChainPoints, iIndex-1);
                 list mine = [ iPrim, llGetLinkKey(iPrim) ];
-                Particles(iPrim, (key)llList2String(lTmp,1), g_vLeashSize);
+                key kTarget = (key)llList2String(lTmp,1);
+                if(kTarget)
+                    Particles(iPrim, kTarget, g_vLeashSize);
+                else
+                    Particles(iPrim, kID, g_vLeashSize);
             }
         } else if(iNum == SUMMON_PARTICLES)
         {
             list lTmp = llParseString2List(sStr, ["|"],[]);
             if(llListFindList(g_lChainPoints, [llList2String(lTmp,0)])!=-1)
             {
-                key ident = llGenerateKey();
-                UpdateDSRequest(NULL, ident, llList2String(lTmp,0)+"|"+(string)kID);
+                if(llGetListLength(lTmp)==1){
+                    key ident = llGenerateKey();
+                    UpdateDSRequest(NULL, ident, llList2String(lTmp,0)+"|"+(string)kID);
 
-                llMessageLinked(LINK_SET, QUERY_POINT_KEY, llList2String(lTmp,0), ident);
-                llMessageLinked(LINK_SET, TIMEOUT_REGISTER, "5", "cuff_link_expire:"+(string)ident);
+                    llMessageLinked(LINK_SET, QUERY_POINT_KEY, llList2String(lTmp,0), ident);
+                    llMessageLinked(LINK_SET, TIMEOUT_REGISTER, "5", "cuff_link_expire:"+(string)ident);
+                } else {
+                    key ident = llGenerateKey();
+                    UpdateDSRequest(NULL, ident, llList2String(lTmp,0)+"|"+llList2String(lTmp,1));
+                    
+                    llMessageLinked(LINK_SET, QUERY_POINT_KEY, llList2String(lTmp,1), ident);
+                    llMessageLinked(LINK_SET, TIMEOUT_REGISTER, "5", "cuff_link_expire:"+(string)ident);
+                }
+            }else{
+                if(g_iVerbosity>=2){
+                    llMessageLinked(LINK_SET, NOTIFY, "0Chainpoint "+llList2String(lTmp,0)+" not found in list: "+llDumpList2String(g_lChainPoints,"~"), g_kWearer);
+                }
             }
         } else if(iNum == CLEAR_ALL_CHAINS)
         {
@@ -453,6 +624,18 @@ state active
             if(index!=-1){
                 integer linkNum = llList2Integer(g_lChainPoints,index-1);
                 llLinkParticleSystem(linkNum, []);
+            }
+        } else if(iNum == AUTH_REPLY)
+        {
+            if(kID == "pass_leash")
+            {
+                list lTmp = llParseString2List(sStr,["|"],[]);
+                if(llList2String(lTmp,0)=="AuthReply")
+                {
+                    key kAv = (key)llList2String(lTmp,1);
+                    integer iAuth = (integer)llList2String(lTmp,2);
+                    Dialog(kAv, "\n[zCollar Leash Pass]\n\nDo you want to accept %WEARERNAME%'s leash?", [],["Yes", "No"],0,iAuth,"leash~pass");
+                }
             }
         }
         //llOwnerSay(llDumpList2String([iSender,iNum,sStr,kID],"^"));
