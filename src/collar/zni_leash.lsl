@@ -436,7 +436,7 @@ state active
                     
                     
                     if(iRespring)//Menu(kAv,iAuth);
-                        llMessageLinked(LINK_SET, TIMEOUT_REGISTER, "2", "respring_menu:"+(string)kAv+":"+(string)iAuth);
+                        llMessageLinked(LINK_SET, TIMEOUT_REGISTER, "4", "respring_menu:"+(string)kAv+":"+(string)iAuth);
                 } else if(sMenu == "length")
                 {
                     SetLength((float)sMsg);
