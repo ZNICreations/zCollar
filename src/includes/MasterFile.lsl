@@ -171,7 +171,7 @@ integer MaskOutranks(integer iMask1, integer iMask2)
 
     if(iMask1&C_BLOCKED)return FALSE;
     if(iMask1&C_GROUP && !(iMask2&(C_OWNER|C_TRUSTED)))return TRUE;
-    if(iMask1&C_PUBLIC)return FALSE;
+    if(iMask1&C_PUBLIC && !(iMask2&(C_OWNER|C_TRUSTED|C_GROUP|C_WEARER)))return TRUE;
 
     return FALSE;
 }

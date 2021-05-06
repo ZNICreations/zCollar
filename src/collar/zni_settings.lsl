@@ -258,14 +258,6 @@ default
         }
         g_kWearer = llGetOwner();
         
-        
-        if(llGetInventoryType(g_sSettings)!=INVENTORY_NONE){
-            g_iSettingsRead=0;
-            g_kSettingsCard = llGetInventoryKey(g_sSettings);
-            UpdateDSRequest(NULL, llGetNotecardLine(g_sSettings,0), "read_settings:0");
-        }
-        
-        Send("type=LIST", "lst");
     }
     
     changed(integer iChange){
@@ -315,7 +307,7 @@ default
             
             list lDat = llParseStringKeepNulls(sBody, [";;"],[]);
             g_lReqs = llDeleteSubList(g_lReqs,0,2);
-            llSleep(0.25);
+            llSleep(0.5);
             
             if(g_iVerbosity>=3)llOwnerSay("HTTP ("+(string)iStat+")\n\n"+sBody);
             //llOwnerSay(sBody);
@@ -457,6 +449,13 @@ default
         } else if(iNum == STARTUP)
         {
             g_iStartup=TRUE;
+            if(llGetInventoryType(g_sSettings)!=INVENTORY_NONE){
+                g_iSettingsRead=0;
+                g_kSettingsCard = llGetInventoryKey(g_sSettings);
+                UpdateDSRequest(NULL, llGetNotecardLine(g_sSettings,0), "read_settings:0");
+            }
+        
+            Send("type=LIST", "lst");
         } else if(iNum == LM_SETTING_REQUEST)
         {
             list lPar = llParseString2List(sMsg, ["_"],[]);
