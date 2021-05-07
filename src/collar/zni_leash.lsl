@@ -45,7 +45,7 @@ ConfigMenu(key kID, integer iAuth)
 {
     string sPrompt = "\n[zCollar Leash Config]\n\nCurrent Texture: "+g_sParticleTexture;
     list lButtons = [Checkbox((g_sParticleMode=="Ribbon"), "Ribbon"), Checkbox(g_iTurnMode, "Turn"), Checkbox((g_sParticleTexture=="Silk"), "Silk"), Checkbox((g_sParticleTexture=="Chain"), "Chain"), Checkbox((g_sParticleTexture=="Leather"),"Leather"), Checkbox((g_sParticleTexture=="Rope"),"Rope"), Checkbox(g_iNoLeash, "Invisible"), Checkbox(g_iParticleGlow, "Glow")];
-    Dialog(kID, sPrompt, lButtons, ["Color", UPMENU], 0, iAuth, "Menu~Config");
+    Dialog(kID, sPrompt, lButtons, ["Color", "* GRAVITY", "* SIZE", UPMENU], 0, iAuth, "Menu~Config");
 }
 
 string UnCheckbox(string sBox)
@@ -515,6 +515,14 @@ state active
                     {
                         Dialog(kAv, "[zCollar Leash Color]", ["colormenu please"],[], 0, iAuth, "leash~color");
                         iRespring = FALSE;
+                    } else if(sMsg == "* GRAVITY")
+                    {
+                        Dialog(kAv, "[zCollar Leash Gravity]\n\nCurrent Gravity: "+(string)(g_vLeashGravity.z),[],[],0,iAuth,"leash~gravity");
+                        iRespring=FALSE;
+                    } else if(sMsg == "* SIZE")
+                    {
+                        Dialog(kAv, "[zCollar Leash Size]\n\nCurrent Size: "+(string)(g_vLeashSize.x), [],[],0,iAuth,"leash~size");
+                        iRespring=FALSE;
                     }
                     
                     
@@ -563,6 +571,12 @@ state active
                         llMessageLinked(LINK_SET, DESUMMON_PARTICLES, "collarfront", "");
                         llMessageLinked(LINK_SET, NOTIFY, "1Now following "+SLURL(kAv), kAv);
                     }
+                } else if(sMenu == "leash~gravity"){
+                    llMessageLinked(LINK_SET,LM_SETTING_SAVE,"leash_gravity="+sMsg,"");
+                    ConfigMenu(kAv,iAuth);
+                } else if(sMenu == "leash~size"){
+                    llMessageLinked(LINK_SET, LM_SETTING_SAVE, "leash_size="+sMsg,"");
+                    ConfigMenu(kAv,iAuth);
                 }
             }
         } else if (iNum == DIALOG_TIMEOUT) {
@@ -619,6 +633,14 @@ state active
                 } else if(sVar == "follow"){
                     g_iFollowMode=(integer)sVal;
                     if(g_iFollowMode)llMessageLinked(LINK_SET, DESUMMON_PARTICLES, "collarfront", "");
+                } else if(sVar == "gravity"){
+                    g_vLeashGravity.z=(float)sVal;
+                    iUpdateParticles=TRUE;
+                } else if(sVar == "size")
+                {
+                    g_vLeashSize.x = (float)sVal;
+                    g_vLeashSize.y = (float)sVal;
+                    iUpdateParticles=TRUE;
                 }
                 
                 
