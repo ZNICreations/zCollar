@@ -35,7 +35,7 @@ Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPa
 
 Menu(key kID, integer iAuth) {
     string sPrompt = "\n[zCollar Leash]";
-    list lButtons = [ "Length", "Yank", "Give Holder", "Configure", "Tie", "Pass"];
+    list lButtons = [ "Length", "Yank", "Give Holder", "Configure", "Tie", "Pass", "Follow"];
     if(g_iLeashed)lButtons += ["Unleash"];
     else lButtons += ["Grab"];
     Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Menu~Main");
@@ -97,7 +97,9 @@ UserCommand(integer iNum, string sStr, key kID) {
                     llMessageLinked(LINK_SET, DESUMMON_PARTICLES, "collarfront", "");
                     llTargetRemove(g_iLeashTarget);
                     g_iLeashedAuth = 0;
+                    g_iFollowMode=FALSE;
                     llMessageLinked(LINK_SET, LM_SETTING_DELETE, "leash_leashedto", "");
+                    llMessageLinked(LINK_SET, LM_SETTING_DELETE, "leash_follow", "");
                     llMessageLinked(LINK_SET, LM_SETTING_DELETE, "leash_leashedauth", "");
                     
                     llMessageLinked(LINK_SET, NOTIFY, "1%WEARERNAME% has been unleashed by "+SLURL(kID), g_kLeashedTo);
@@ -166,13 +168,41 @@ UserCommand(integer iNum, string sStr, key kID) {
                     llSensor("","",AGENT,10,PI);
                 }
             } else llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to passing the leash", kID);
+        } else if(sChangetype == "follow"){
+            if(MaskOutranks(iNum, g_iLeashedAuth))
+            {
+                key kTmp = (key)sChangevalue;
+                llMessageLinked(LINK_SET, LM_SETTING_SAVE, "leash_follow=1", "");
+                g_iFollowMode=TRUE;
+                if(kTmp)
+                {
+                    llMessageLinked(LINK_SET, NOTIFY, "1Asking "+SLURL(sChangevalue)+" if they want to be followed", kID);
+                    llMessageLinked(LINK_SET, AUTH_REQUEST, "pass_follow", sChangevalue);
+                }else{
+                    if(sChangevalue == "me")
+                    {
+                        // Follow the command issuer
+                        llMessageLinked(LINK_SET, DESUMMON_PARTICLES, "collarfront", "");
+                        Leash(kID, iNum, TRUE);
+                        llMessageLinked(LINK_SET, NOTIFY, "1Now following "+SLURL(kID), kID);
+                    }else{
+                        // Scan for follow!
+                        g_iAnchorMode=FALSE;
+                        g_kTempMenuUser=kID;
+                        g_iTempMenuUser=iNum;
+                        llSensor("","",AGENT,10,PI);
+                        
+                    }
+                }
+            }
         }
     }
 }
 
 Leash(key kAv, integer iAuth, integer iSave)
 {
-    llMessageLinked(LINK_SET, SUMMON_PARTICLES, "collarfront", kAv);
+    if(!g_iFollowMode)
+        llMessageLinked(LINK_SET, SUMMON_PARTICLES, "collarfront", kAv);
     if(iSave){
         llMessageLinked(LINK_SET, LM_SETTING_SAVE, "leash_leashedauth="+(string)iAuth,"");
         llMessageLinked(LINK_SET, LM_SETTING_SAVE, "leash_leashedto="+(string)kAv,"");
@@ -378,8 +408,12 @@ state active
         
         if(g_iAnchorMode)
             Dialog(g_kTempMenuUser, "\n[zCollar Leash Scan]\n\n", lButtons, [UPMENU],0,g_iTempMenuUser, "leash~post");
-        else
-            Dialog(g_kTempMenuUser, "\n[zCollar Leash Scan]\n\n", lButtons, [UPMENU],0,g_iTempMenuUser, "leash~pass2");
+        else{
+            if(!g_iFollowMode)
+                Dialog(g_kTempMenuUser, "\n[zCollar Leash Scan]\n\n", lButtons, [UPMENU],0,g_iTempMenuUser, "leash~pass2");
+            else
+                Dialog(g_kTempMenuUser, "\n[zCollar Follow Scan]\n\n", lButtons, [UPMENU], 0, g_iTempMenuUser, "leash~follow");
+        }
     }
     link_message(integer iSender,integer iNum,string sStr,key kID){
         if(iNum == COMMAND) {
@@ -433,6 +467,9 @@ state active
                     } else if(sMsg == "Pass")
                     {
                         UserCommand(iAuth,"pass",kAv);
+                        iRespring=FALSE;
+                    } else if(sMsg == "Follow"){
+                        UserCommand(iAuth, "follow", kAv);
                         iRespring=FALSE;
                     }
                     
@@ -509,6 +546,23 @@ state active
                 } else if(sMenu == "leash~pass2")
                 {
                     UserCommand(iAuth,"pass "+sMsg, kAv);
+                } else if(sMenu == "leash~follow"){
+                    UserCommand(iAuth, "follow "+sMsg, kAv);
+                } else if(sMenu == "leash~follower")
+                {
+                    if(sMsg == "No")
+                    {
+                        g_iFollowMode=FALSE;
+                        llMessageLinked(LINK_SET, LM_SETTING_DELETE, "leash_follow","");
+                        
+                        llMessageLinked(LINK_SET, NOTIFY, "0Follow denied by "+SLURL(kAv), g_kWearer);
+                    } else if(sMsg == "Yes")
+                    {
+                        // Accepted
+                        Leash(kAv, iAuth, TRUE);
+                        llMessageLinked(LINK_SET, DESUMMON_PARTICLES, "collarfront", "");
+                        llMessageLinked(LINK_SET, NOTIFY, "1Now following "+SLURL(kAv), kAv);
+                    }
                 }
             }
         } else if (iNum == DIALOG_TIMEOUT) {
@@ -562,10 +616,13 @@ state active
                 {
                     g_vLeashColor = (vector)sVal;
                     iUpdateParticles=TRUE;
+                } else if(sVar == "follow"){
+                    g_iFollowMode=(integer)sVal;
+                    if(g_iFollowMode)llMessageLinked(LINK_SET, DESUMMON_PARTICLES, "collarfront", "");
                 }
                 
                 
-                if(iUpdateParticles && g_iLeashed)llMessageLinked(LINK_SET, SUMMON_PARTICLES, "collarfront", g_kLeashedTo);
+                if(iUpdateParticles && g_iLeashed && !g_iFollowMode)llMessageLinked(LINK_SET, SUMMON_PARTICLES, "collarfront", g_kLeashedTo);
             } else if(sToken == "global")
             {
                 if(sVar == "checkboxes")
@@ -658,15 +715,20 @@ state active
             }
         } else if(iNum == AUTH_REPLY)
         {
+            list lTmp = llParseString2List(sStr,["|"],[]);
             if(kID == "pass_leash")
             {
-                list lTmp = llParseString2List(sStr,["|"],[]);
                 if(llList2String(lTmp,0)=="AuthReply")
                 {
                     key kAv = (key)llList2String(lTmp,1);
                     integer iAuth = (integer)llList2String(lTmp,2);
                     Dialog(kAv, "\n[zCollar Leash Pass]\n\nDo you want to accept %WEARERNAME%'s leash?", [],["Yes", "No"],0,iAuth,"leash~pass");
                 }
+            } else if(kID == "pass_follow")
+            {
+                key kAv = (key)llList2String(lTmp,1);
+                integer iAuth = (integer)llList2String(lTmp,2);
+                Dialog(kAv, "\n[zCollar Follow]\n\nDo you want to let %WEARERNAME% follow you?", [], ["Yes", "No"],0,iAuth,"leash~follower");
             }
         }
         //llOwnerSay(llDumpList2String([iSender,iNum,sStr,kID],"^"));
