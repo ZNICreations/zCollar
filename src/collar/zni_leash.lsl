@@ -92,6 +92,8 @@ UserCommand(integer iNum, string sStr, key kID) {
                 if(g_iLeashed){
                     llStopMoveToTarget();
                     g_iLeashed=FALSE;
+                    g_iAlreadyMoving=FALSE;
+                    llMessageLinked(LINK_SET, LEASH_END_MOVEMENT,"","");
                     llMessageLinked(LINK_SET, DESUMMON_PARTICLES, "collarfront", "");
                     llTargetRemove(g_iLeashTarget);
                     g_iLeashedAuth = 0;
@@ -686,7 +688,10 @@ state active
             g_iJustMoved = 0;
         }
         
-        if(g_iAlreadyMoving)llMessageLinked(LINK_SET, LEASH_END_MOVEMENT, "", "");
+        if(g_iAlreadyMoving){
+            g_iAlreadyMoving=FALSE;
+            llMessageLinked(LINK_SET, LEASH_END_MOVEMENT, "", "");
+        }
     }
     
     
@@ -715,9 +720,14 @@ state active
             }
             
             
-            if(!g_iAlreadyMoving) llMessageLinked(LINK_SET, LEASH_START_MOVEMENT, "","");
+            if(!g_iAlreadyMoving) {
+                g_iAlreadyMoving=TRUE;
+                llMessageLinked(LINK_SET, LEASH_START_MOVEMENT, "","");
+            }
         } else {
             llStopMoveToTarget();
+            g_iAlreadyMoving=FALSE;
+            llMessageLinked(LINK_SET, LEASH_END_MOVEMENT,"","");
             llTargetRemove(g_iLeashTarget);
             UserCommand(C_COLLAR_INTERNALS, "unleash", llGetKey());
         }
