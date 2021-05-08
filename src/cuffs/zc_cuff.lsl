@@ -15,20 +15,9 @@ Licensed under the GPLv2. See LICENSE for full details.
 https://github.com/OpenCollarTeam/OpenCollar
 
 */
-list StrideOfList(list src, integer stride, integer start, integer end)
-{
-    list l = [];
-    integer ll = llGetListLength(src);
-    if(start < 0)start += ll;
-    if(end < 0)end += ll;
-    if(end < start) return llList2List(src, start, start);
-    while(start <= end)
-    {
-        l += llList2List(src, start, start);
-        start += stride;
-    }
-    return l;
-}
+#include "MasterFile.lsl"
+
+
 
 integer API_CHANNEL = 0x60b97b5e;
 string NEW_VERSION;
@@ -59,56 +48,11 @@ Compare(string V1, string V2){
     }
 }
 
-
-integer bool(integer a){
-    if(a)return TRUE;
-    else return FALSE;
-}
-list g_lCheckboxes=["□","▣"];
-string Checkbox(integer iValue, string sLabel) {
-    return llList2String(g_lCheckboxes, bool(iValue))+" "+sLabel;
-}
 //list g_lCollars;
-string g_sAddon = "OpenCollar Cuffs";
+string g_sAddon = "zCollar Cuffs";
 
 string g_sVersion = "1.0.0010";
 
-//integer CMD_ZERO            = 0;
-integer CMD_OWNER           = 500;
-//integer CMD_TRUSTED         = 501;
-//integer CMD_GROUP           = 502;
-integer CMD_WEARER          = 503;
-integer CMD_EVERYONE        = 504;
-//integer CMD_BLOCKED         = 598; // <--- Used in auth_request, will not return on a CMD_ZERO
-//integer CMD_RLV_RELAY       = 507;
-//integer CMD_SAFEWORD        = 510;
-//integer CMD_RELAY_SAFEWORD  = 511;
-//integer CMD_NOACCESS        = 599;
-
-integer LM_SETTING_SAVE     = 2000; //scripts send messages on this channel to have settings saved, <string> must be in form of "token=value"
-integer LM_SETTING_REQUEST  = 2001; //when startup, scripts send requests for settings on this channel
-integer LM_SETTING_RESPONSE = 2002; //the settings script sends responses on this channel
-integer LM_SETTING_DELETE   = 2003; //delete token from settings
-//integer LM_SETTING_EMPTY    = 2004; //sent when a token has no value
-
-integer DIALOG          = -9000;
-integer DIALOG_RESPONSE = -9001;
-integer DIALOG_TIMEOUT  = -9002;
-
-integer NOTIFY=-1002;
-
-
-integer SUMMON_PARTICLES = -58931; // Used only for cuffs to summon particles from one NAMED leash point to another NAMED anchor point
-// SUMMON_PARTICLES should follow this message format: <From Name>|<To Name>|<Age>|<Gravity>
-integer QUERY_POINT_KEY = -58932;
-// This query is automatically triggered and the REPLY signal immediately spawns in particles via the SetParticles function
-// Replies to this query are posted on the REPLY_POINT_KEY
-// Message format for QUERY is: <Name>       | kID identifier
-integer REPLY_POINT_KEY = -58933;
-// Reply format: <kID identifier>       |kID  <Key>
-integer CLEAR_ALL_CHAINS = -58934;
-integer STOP_CUFF_POSE = -58935; // <-- stops all active animations originating from this cuff
-integer DESUMMON_PARTICLES = -58936; // Message only includes the From point name
 
 integer g_iFirstInit=TRUE;
 
@@ -123,11 +67,6 @@ list g_lOptedLM     = [];
 list g_lPoses = [];
 
 
-list g_lMenuIDs;
-integer g_iMenuStride;
-
-string UPMENU = "BACK";
-
 Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName) {
     key kMenuID = llGenerateKey();
 
@@ -139,20 +78,20 @@ Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPa
 }
 
 Menu(key kID, integer iAuth) {
-    string sPrompt = "\n[OpenCollar Cuffs]\nMemory: "+(string)llGetFreeMemory()+"b\nVersion: "+g_sVersion+"\n";
+    string sPrompt = "\n[zCollar Cuffs]\nMemory: "+(string)llGetFreeMemory()+"b\nVersion: "+g_sVersion+"\n";
     sPrompt += "\nCuff Name: "+g_sAddon+"\n";
 
     if(UPDATE_AVAILABLE)sPrompt+="* An update is available!\n";
     if(g_iAmNewer)sPrompt+="** You are using a pre-release version. Some bugs may be encountered!";
     list lButtons  = [];//"TEST CHAINS"];
 
-    if(g_iHasPoses && llGetInventoryType("oc_cuff_pose")==INVENTORY_SCRIPT){
+    if(g_iHasPoses && llGetInventoryType("zc_cuff_pose")==INVENTORY_SCRIPT){
         if(!g_iHidden)
             lButtons+=["Pose"];
         else sPrompt +="\nPoses not available while the cuffs are hidden";
     }
 
-    if(iAuth == CMD_OWNER)
+    if(iAuth & C_OWNER)
     {
         lButtons+=["ClearChains"];
     }
@@ -172,9 +111,8 @@ Menu(key kID, integer iAuth) {
 
 
 UserCommand(integer iNum, string sStr, key kID) {
-    if (iNum<CMD_OWNER || iNum>CMD_WEARER) return;
     if (llSubStringIndex(llToLower(sStr), llToLower(g_sAddon)) && llToLower(sStr) != "menu " + llToLower(g_sAddon)) return;
-    if (iNum == CMD_OWNER && llToLower(sStr) == "runaway") {
+    if (iNum & C_OWNER && llToLower(sStr) == "runaway") {
         return;
     }
 
@@ -216,38 +154,6 @@ integer g_iLMLastRecv;
 integer g_iLMLastSent;
 
 
-list g_lDSRequests;
-key NULL=NULL_KEY;
-UpdateDSRequest(key orig, key new, string meta){
-    if(orig == NULL){
-        g_lDSRequests += [new,meta];
-    }else {
-        integer index = HasDSRequest(orig);
-        if(index==-1)return;
-        else{
-            g_lDSRequests = llListReplaceList(g_lDSRequests, [new,meta], index,index+1);
-        }
-    }
-}
-
-string GetDSMeta(key id){
-    integer index=llListFindList(g_lDSRequests,[id]);
-    if(index==-1){
-        return "N/A";
-    }else{
-        return llList2String(g_lDSRequests,index+1);
-    }
-}
-
-integer HasDSRequest(key ID){
-    return llListFindList(g_lDSRequests, [ID]);
-}
-
-DeleteDSReq(key ID){
-    if(HasDSRequest(ID)!=-1)
-        g_lDSRequests = llDeleteSubList(g_lDSRequests, HasDSRequest(ID), HasDSRequest(ID)+1);
-    else return;
-}
 
 ///
 /// FROM SL WIKI http://wiki.secondlife.com/wiki/Combined_Library#Replace
@@ -311,8 +217,6 @@ list g_lLGv2Map;
 integer g_iLGV2Listen;
 integer g_iTmpHide=0;
 
-integer TIMEOUT_REGISTER = 30498;
-integer TIMEOUT_FIRED = 30499;
 
 integer g_iCuffLocked=FALSE;
 integer g_iLocked;
@@ -321,7 +225,7 @@ string g_sCurrentPose="NONE";
 
 PosesMenu (key kAv, integer iAuth, integer iPage)
 {
-    string sPrompt = "\n[OpenCollar Cuffs]\n> Poses selection\n\n* Current Pose: ";
+    string sPrompt = "\n[zCollar Cuffs]\n> Poses selection\n\n* Current Pose: ";
 
     sPrompt += g_sCurrentPose;
 
@@ -433,7 +337,7 @@ default
         if(iNum==2)
         {
 
-            UpdateDSRequest(NULL, llHTTPRequest("https://raw.githubusercontent.com/OpenCollarTeam/OpenCollar/master/web/cuffs.txt",[],""), "check_version");
+            UpdateDSRequest(NULL, llHTTPRequest("https://raw.githubusercontent.com/ZNICreations/zCollar/master/web/cuffs.txt",[],""), "check_version");
             if(g_iLMV2Listen !=-1)llListenRemove(g_iLMV2Listen);
             g_iLMV2Listen = llListen(-8888, "", "", "");
 
@@ -548,7 +452,7 @@ default
                         g_lLGv2Map = llParseString2List(llList2String(lParam,1), [" > "],[]);
                     } else if(llList2String(lParam,0)=="NoPoses"){
                         ClearAllParticles();
-                        UpdateDSRequest(NULL, llHTTPRequest("https://raw.githubusercontent.com/OpenCollarTeam/OpenCollar/master/web/cuffs.txt",[],""), "check_version");
+                        UpdateDSRequest(NULL, llHTTPRequest("https://raw.githubusercontent.com/ZNICreations/zCollar/master/web/cuffs.txt",[],""), "check_version");
                         if(g_iLMV2Listen !=-1)llListenRemove(g_iLMV2Listen);
                         g_iLMV2Listen = llListen(-8888, "", "", "");
 
@@ -614,7 +518,7 @@ default
 
                         //llSay(0, "SAVE "+sToken+"_"+sVar+"="+sVal);
 
-                        if (sToken == "occuffs")
+                        if (sToken == "zccuffs")
                         {
                             if (sVar == "synclock")
                             {
@@ -732,10 +636,12 @@ default
                             }
                         }
                     }
-                    else if (iNum >= CMD_OWNER && iNum <= CMD_EVERYONE)
+                    else if (iNum == COMMAND)
                     {
-                        UserCommand(iNum, sStr, kID);
-
+                        list lTmp = llParseString2List(sStr,["|>"],[]);
+                        integer iMask = llList2Integer(lTmp,0);
+                        string sCmd = llList2String(lTmp,1);
+                        UserCommand(iMask, sCmd, kID);
                     }
                     else if (iNum == DIALOG_TIMEOUT)
                     {
@@ -762,7 +668,7 @@ default
                                 if (sMsg == UPMENU)
                                 {
                                     iRespring=FALSE;
-                                    Link("from_addon", iAuth, "menu Addons", kAv);
+                                    Link("from_addon", 0, "menu Addons", kAv);
                                 }
                                 else if (sMsg == "Pose")
                                 {
@@ -777,20 +683,20 @@ default
 
                                     Link("from_addon", SUMMON_PARTICLES, "frlac|fllac|2", "");
                                     Link("from_addon", SUMMON_PARTICLES, "bllac|brlac|2", "");
-                                    Link("from_addon", CMD_OWNER, "nadu", "");
+                                    Link("from_addon", COMMAND, "1|>nadu", "");
                                 }else if(sMsg == "ClearChains"){
-                                    if(iAuth==CMD_OWNER)
+                                    if(iAuth&C_OWNER)
                                         Link("from_addon", CLEAR_ALL_CHAINS, "", "");
                                 } else if(sMsg == Checkbox(g_iSyncLock, "SyncLock")){
-                                    if(iAuth == CMD_OWNER){
+                                    if(iAuth & C_OWNER){
                                         g_iSyncLock=1-g_iSyncLock;
                                         // sync lock save
-                                        Link("from_addon", LM_SETTING_SAVE, "occuffs_synclock="+(string)g_iSyncLock, "");
+                                        Link("from_addon", LM_SETTING_SAVE, "zccuffs_synclock="+(string)g_iSyncLock, "");
                                     }else Link("from_addon", NOTIFY, "0%NOACCESS% to toggling lock sync!", kAv);
                                 } else if(sMsg == Checkbox(g_iCuffLocked, "Lock")){
-                                    if(iAuth==CMD_OWNER){
+                                    if(iAuth&C_OWNER){
                                         g_iCuffLocked=1-g_iCuffLocked;
-                                        Link("from_addon", LM_SETTING_SAVE, "occuffs_locked="+(string)g_iCuffLocked, "");
+                                        Link("from_addon", LM_SETTING_SAVE, "zccuffs_locked="+(string)g_iCuffLocked, "");
                                     }else Link("from_addon", NOTIFY, "0%NOACCESS% to toggling cuffs lock", kAv);
 
                                 }
@@ -810,7 +716,7 @@ default
                                     // send this command to all cuffs, this way we can ensure the animation fully stops, then clear all chains that were associated with this pose
                                     Link("from_addon", STOP_CUFF_POSE, g_sCurrentPose, g_sPoseName);
                                     g_sCurrentPose="NONE";
-                                    Link("from_addon", LM_SETTING_DELETE, "occuffs_"+g_sPoseName+"pose","");
+                                    Link("from_addon", LM_SETTING_DELETE, "zccuffs_"+g_sPoseName+"pose","");
                                     //Link("from_addon", CLEAR_ALL_CHAINS, "", "");
                                     iRespring=FALSE;
                                     Link("from_addon", TIMEOUT_REGISTER, "2", "respring_poses:"+(string)iAuth+":"+(string)kAv+":"+(string)iPage+":"+(string)llGetKey());
