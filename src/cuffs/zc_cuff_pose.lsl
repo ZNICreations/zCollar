@@ -1,18 +1,19 @@
     
 /*
-This file is a part of OpenCollar.
+This file is a part of zCollar.
 Copyright ©2021
 
 
 : Contributors :
 
 Aria (Tashia Redrose)
+    * May 2021          -       Rebranded as zc_cuff_pose
     * February 2021       -       Created oc_cuff_pose
       
       
 et al.
 Licensed under the GPLv2. See LICENSE for full details.
-https://github.com/OpenCollarTeam/OpenCollar
+https://github.com/ZNICreations/zCollar
 
 */ 
 #include "MasterFile.lsl"
