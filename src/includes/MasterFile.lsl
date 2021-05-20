@@ -222,7 +222,7 @@ string SLURL(key kID){
 }
 string OSLURL(key kID)
 {
-    return "secondlife:///app/object/"+(string)kID+"/inspect";
+    return llKey2Name(kID); // TODO: Replace with a SLURL of some kind pointing to the object inspect.
 }
 
 list StrideOfList(list src, integer stride, integer start, integer end)

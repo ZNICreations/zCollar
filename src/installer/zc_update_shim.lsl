@@ -120,9 +120,13 @@ string InstallerBox(integer iMode, string sLabel)
     return sBox+" "+sLabel;
 }
 list g_lPkgs;
+integer g_iLastPage;
+key g_kLastAv;
 
 Prompt(key kAv, integer iPage)
 {
+    g_kLastAv = kAv;
+    g_iLastPage=iPage;
     list lButtons = [];
     integer i=0;
     integer end = llGetListLength(g_lPkgs);
@@ -131,7 +135,7 @@ Prompt(key kAv, integer iPage)
         lButtons += InstallerBox((integer)llList2String(g_lPkgs,i+2), llList2String(g_lPkgs,i+1));
     }
     
-    Dialog(kAv, "What packages would you like to install, or remove?\n\n* Note: Required and deprecated packages cannot be scheduled for uninstallation. If you wish to fully uninstall zCollar, please see the PackageManager in help/about.", lButtons, ["CONFIRM"], iPage, 500, "prompt~pkgs");
+    Dialog(kAv, "What packages would you like to install, or remove?\n\n* Note: Required and deprecated packages cannot be scheduled for uninstallation. If you wish to fully uninstall zCollar, please see the PackageManager in help/about.", lButtons, ["CONFIRM"], iPage, C_OWNER, "prompt~pkgs");
 }
 
 integer IndexOfBundle(string InstallBox)
@@ -191,6 +195,7 @@ default
             //g_iPass++;
             llOwnerSay("Please be sure you configure the package preferences.");
             llResetTime();
+            Prompt(g_kLastAv,g_iLastPage);
             //llMessageLinked(LINK_SET, LM_SETTING_REQUEST, "ALL", "");
         } else if(llGetTime()>=10 && g_iPass>=3 && !g_iReady)
         {
