@@ -150,6 +150,46 @@ integer IndexOfBundle(string InstallBox)
     
     return -1;
 }
+
+integer HasPackages()
+{
+    integer i=0;
+    integer end = llGetInventoryNumber(INVENTORY_NOTECARD);
+    for(i=0;i<end;i++)
+    {
+        string name = llGetInventoryName(INVENTORY_NOTECARD,i);
+        if(llGetSubString(name,0,2)=="PKG")return TRUE;
+    }
+    
+    llOwnerSay("No packages found, you will be shown the default installation options");
+    return FALSE;
+}
+
+AugmentPackages()
+{
+    integer i=0;
+    integer end = llGetListLength(g_lPkgs);
+    if(!HasPackages())return;
+    
+    for(i=0;i<end;i+=3)
+    {
+        if(llList2Integer(g_lPkgs,i+2)<=1){
+            // inventory iteration
+            integer x=0;
+            integer xend = llGetInventoryNumber(INVENTORY_NOTECARD);
+            g_lPkgs = llListReplaceList(g_lPkgs,[FALSE],i+2,i+2);
+            //llOwnerSay("On package: "+llList2String(g_lPkgs,i+1));
+            
+            for(x=0;x<xend;x++)
+            {
+                if(llList2String(g_lPkgs,i) == llGetInventoryName(INVENTORY_NOTECARD, x)){
+                    g_lPkgs = llListReplaceList(g_lPkgs,[TRUE],i+2,i+2);
+                    //llOwnerSay("Package "+llList2String(g_lPkgs,i+1)+" is installed, checking the checkbox");
+                }
+            }
+        }
+    }
+}
 default
 {
     state_entry()
@@ -159,7 +199,15 @@ default
         
         if(llGetInventoryType("oc_dialog") != INVENTORY_NONE)
         {
-            llRemoveInventory("oc_dialog");
+            llRemoveInventory("oc_dialog"); // forced deprecation of OpenCollar dialog
+        }
+        
+        list lAssertOFF = ["zc_states", "zc_core", "zc_api"];
+        integer i=0;
+        integer end = llGetListLength(lAssertOFF);
+        for(i=0;i<end;i++)
+        {
+            if(llGetInventoryType(llList2String(lAssertOFF, i))==INVENTORY_SCRIPT)llSetScriptState(llList2String(lAssertOFF, i), FALSE);
         }
         
         //llWhisper(0, "Update Shim is now active. Requesting all settings");
@@ -171,18 +219,6 @@ default
         //llMessageLinked(LINK_SET, UPDATER, "update_active", "");
         g_iRelayActive = llGetStartParameter();
         
-        integer i=0;
-        integer end = llGetInventoryNumber(INVENTORY_NOTECARD);
-        for(i=0;i<end;i++)
-        {
-            string name = llGetInventoryName(INVENTORY_NOTECARD,i);
-            if(llSubStringIndex(name,"BUNDLE_")!=-1 || llSubStringIndex(name,"PKG_")!=-1)
-            {
-                llRemoveInventory(name); // Remove the bundles from the collar to prevent duplicates
-                i=-1;
-                end=llGetInventoryNumber(INVENTORY_NOTECARD);
-            }
-        }
         
         if(!g_iRelayActive)
             llSay(UPDATER_CHANNEL, "pkg_get|"+(string)SECURE);
@@ -195,7 +231,7 @@ default
             //g_iPass++;
             llOwnerSay("Please be sure you configure the package preferences.");
             llResetTime();
-            Prompt(g_kLastAv,g_iLastPage);
+            //Prompt(g_kLastAv,g_iLastPage);
             //llMessageLinked(LINK_SET, LM_SETTING_REQUEST, "ALL", "");
         } else if(llGetTime()>=10 && g_iPass>=3 && !g_iReady)
         {
@@ -252,6 +288,19 @@ default
                     } else{
                         if(sMsg == "CONFIRM")
                         {
+                            
+                            integer i=0;
+                            integer end = llGetInventoryNumber(INVENTORY_NOTECARD);
+                            for(i=0;i<end;i++)
+                            {
+                                string name = llGetInventoryName(INVENTORY_NOTECARD,i);
+                                if(llSubStringIndex(name,"BUNDLE_")!=-1 || llSubStringIndex(name,"PKG_")!=-1)
+                                {
+                                    llRemoveInventory(name); // Remove the bundles from the collar to prevent duplicates
+                                    i=-1;
+                                    end=llGetInventoryNumber(INVENTORY_NOTECARD);
+                                }
+                            }
                             iRespring=FALSE;
                             llMessageLinked(LINK_SET,1002, "0Please Stand By... Confirming selection!", kAv);
                             // DO MAGIC TO SEND THE PACKAGE LIST, THEN START UPDATE
@@ -281,6 +330,13 @@ default
                 //llSay(0, "Restoring settings, then removing shim");
                 llResetOtherScript("zni_settings");
                 llResetOtherScript("zc_states");
+                list lAssertOFF = ["zc_states", "zc_core", "zc_api"];
+                integer i=0;
+                integer end = llGetListLength(lAssertOFF);
+                for(i=0;i<end;i++)
+                {
+                    if(llGetInventoryType(llList2String(lAssertOFF, i))==INVENTORY_SCRIPT)llSetScriptState(llList2String(lAssertOFF, i), TRUE);
+                }
                 llSleep(15);
                 llMessageLinked(LINK_SET,REBOOT,"","");
                 llSetRemoteScriptAccessPin(0);
@@ -290,6 +346,7 @@ default
             } else if(llList2String(lCmd,0)=="pkg_reply")
             {
                 g_lPkgs = llParseString2List(llList2String(lCmd,1), ["~"],[]);
+                AugmentPackages();
                 
                 Prompt(llGetOwner(),0);
             } else if(llList2String(lCmd,0)=="PREP_DONE")

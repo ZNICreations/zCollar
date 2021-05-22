@@ -363,6 +363,7 @@ default
             llOwnerSay("@detach=n");
             llMessageLinked(LINK_SET, ALIVE, llGetScriptName(), "");
         } else if(iNum == STARTUP){
+            llOwnerSay("@detach=y");
             state active;
         }
     }
@@ -659,9 +660,9 @@ state active
                     g_iLocked=(integer)sVal;
 
                     if(g_iLocked){
-                        llOwnerSay("@detach=n");
+                        llMessageLinked(LINK_SET, RLV_CMD, "detach=n", "");
                     }else{
-                        llOwnerSay("@detach=y");
+                        llMessageLinked(LINK_SET, RLV_CMD, "detach=y", "");
                     }
                 } else if(sVar == "safeword"){
                     g_sSafeword = sVal;
@@ -719,7 +720,7 @@ state active
             if(sStr == "settings=sent"){
                 if(g_kGroup==(string)NULL_KEY)g_kGroup="";
                 
-                if(!g_iLocked)llOwnerSay("@detach=y");
+                if(!g_iLocked) llMessageLinked(LINK_SET, RLV_CMD, "detach=y", "");
             }
         } else if(iNum == LM_SETTING_DELETE){
             list lPar = llParseString2List(sStr, ["_"],[]);
@@ -732,7 +733,7 @@ state active
             if(sToken=="global"){
                 if(sVar == "locked") {
                     g_iLocked=FALSE;
-                    llOwnerSay("@detach=y");
+                    llMessageLinked(LINK_SET, RLV_CMD, "detach=y", "");
                 }
                 else if(sVar == "safeword"){
                     g_sSafeword = "RED";
@@ -797,9 +798,9 @@ state active
             }
         } else if(iNum == RLV_REFRESH){
             if(g_iLocked){
-                llOwnerSay("@detach=n");
+                llMessageLinked(LINK_SET, RLV_CMD, "detach=n", "");
             } else {
-                llOwnerSay("@detach=y");
+                llMessageLinked(LINK_SET, RLV_CMD, "detach=y", "");
             }
         }else if(iNum == UPDATER){
             if(sStr == "update_active")llResetScript();

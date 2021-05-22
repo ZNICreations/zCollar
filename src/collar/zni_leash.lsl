@@ -752,7 +752,8 @@ state active
                 integer iAuth = (integer)llList2String(lTmp,2);
                 Dialog(kAv, "\n[zCollar Follow]\n\nDo you want to let %WEARERNAME% follow you?", [], ["Yes", "No"],0,iAuth,"leash~follower");
             }
-        }
+        } else if(iNum == LEASH_START_MOVEMENT)g_iAlreadyMoving=TRUE;
+        else if(iNum == LEASH_END_MOVEMENT)g_iAlreadyMoving=FALSE;
         //llOwnerSay(llDumpList2String([iSender,iNum,sStr,kID],"^"));
     }
     

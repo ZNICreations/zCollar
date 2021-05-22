@@ -1,5 +1,5 @@
  
-string COLLAR_VERSION = "10.0.0002"; // Provide enough room
+string COLLAR_VERSION = "10.0.0003"; // Provide enough room
 
 integer MENUNAME_REQUEST = 3000;
 integer MENUNAME_RESPONSE = 3001;
@@ -15,6 +15,12 @@ integer bool(integer a){
 list g_lCheckboxes=["□","▣"];
 string Checkbox(integer iValue, string sLabel) {
     return llList2String(g_lCheckboxes, bool(iValue))+" "+sLabel;
+}
+
+string setor(integer a, string b, string c)
+{
+    if(a)return b;
+    else return c;
 }
 
 integer QUERY_FOLDER_LOCKS = -9100;
