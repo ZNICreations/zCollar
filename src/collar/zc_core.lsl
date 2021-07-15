@@ -83,8 +83,8 @@ Settings(key kID, integer iAuth){
 
 AddonSettings(key kID, integer iAuth)
 {
-    string sPrompt = "zCollar\n\n[Addon Settings\n\nWearerAddons - Allow/Disallow use of wearer owned addons\nAddonLimited - Limit whether wearer owned addons can modify the owners list or weld state (default enabled)";
-    list lButtons = [Checkbox(g_iWearerAddons, "WearerAddons"), Checkbox(g_iWearerAddonLimited, "AddonLimited"), Checkbox(g_iAddons, "Addons")];
+    string sPrompt = "zCollar\n\n[Addon Settings]\n\nWearerAddons - Allow/Disallow use of wearer owned addons\nAddonLimited - Limit whether wearer owned addons can modify the owners list or weld state (default enabled)\nOtherLimits - Security feature that is on by default, and behaves the same as AddonLimits except that it is for other object owners than wearer";
+    list lButtons = [Checkbox(g_iWearerAddons, "WearerAddons"), Checkbox(g_iWearerAddonLimited, "AddonLimited"), Checkbox(g_iAddonLimits, "OtherLimits"), Checkbox(g_iAddons, "Addons")];
     Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Menu~SAddons");
 }
 
@@ -283,6 +283,8 @@ UserCommand(integer iNum, string sStr, key kID) {
     }
 }
 integer g_iWearerAddonLimited=TRUE;
+integer g_iAddonLimits = TRUE;
+
 integer g_iUpdateListener;
 key g_kUpdater;
 integer g_iDiscoveredUpdaters;
@@ -609,6 +611,11 @@ state active
                             g_iWearerAddonLimited=1-g_iWearerAddonLimited;
                             llMessageLinked(LINK_SET, LM_SETTING_SAVE, "global_addonlimit="+(string)g_iWearerAddonLimited,"");
                         }else llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to toggling wearer addon limitations", kAv);
+                    } else if(sMsg == Checkbox(g_iAddonLimits, "OtherLimits")){
+                        if(iAuth &(C_OWNER|C_TRUSTED)){
+                            g_iAddonLimits=1-g_iAddonLimits;
+                            llMessageLinked(LINK_SET, LM_SETTING_SAVE, "global_addonlimitother="+(string)g_iAddonLimits, "");
+                        }else llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to toggling this addon security feature", kAv);
                     } else if(sMsg == Checkbox(g_iAddons, "Addons")){
                         if(iAuth & C_OWNER){
                             g_iAddons=1-g_iAddons;
@@ -682,6 +689,8 @@ state active
                     g_iWearerAddons=(integer)sVal;
                 } else if(sVar == "addonlimit"){
                     g_iWearerAddonLimited=(integer)sVal;
+                } else if(sVar == "addonlimitother"){
+                    g_iAddonLimits = (integer)sVal;
                 } else if(sVar == "addons"){
                     g_iAddons = (integer)sVal;
                 } else if(sVar=="verbosity"){
@@ -747,6 +756,8 @@ state active
                     g_iWearerAddons=TRUE;
                 } else if(sVar=="addonlimit"){
                     g_iWearerAddonLimited=TRUE;
+                } else if(sVar == "addonlimitother"){
+                    g_iAddonLimits=TRUE;
                 }
             } else if(sToken == "auth"){
                 if(sVar == "group"){
