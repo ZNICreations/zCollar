@@ -411,11 +411,15 @@ state active
         if(llToLower(llGetSubString(m,0,llStringLength(g_sPrefix)-1))==llToLower(g_sPrefix)){
             string CMD=llGetSubString(m,llStringLength(g_sPrefix),-1);
             if(llGetSubString(CMD,0,0)==" ")CMD=llDumpList2String(llParseString2List(CMD,[" "],[]), " ");
-            llMessageLinked(LINK_SET, CMD_ZERO, CMD, llGetOwnerKey(i));
+            if(!c)llMessageLinked(LINK_SET, CMD_ZERO_PUB, CMD, llGetOwnerKey(i));
+            else
+                llMessageLinked(LINK_SET, CMD_ZERO, CMD, llGetOwnerKey(i));
         } else if(llGetSubString(m,0,0) == "*" && (llGetOwnerKey(i)==i)){ // only for avatars
             string CMD = llGetSubString(m,1,-1);
             if(llGetSubString(CMD,0,0)==" ")CMD=llDumpList2String(llParseString2List(CMD,[" "],[])," ");
-            llMessageLinked(LINK_SET, CMD_ZERO, CMD, llGetOwnerKey(i));
+            if(!c)llMessageLinked(LINK_SET, CMD_ZERO_PUB, CMD, llGetOwnerKey(i));
+            else
+                llMessageLinked(LINK_SET, CMD_ZERO, CMD, llGetOwnerKey(i));
         } else {
             list lTmp = llParseString2List(m,[" ","(",")"],[]);
             string sDump = llToLower(llDumpList2String(lTmp, ""));
@@ -437,6 +441,10 @@ state active
             integer iAuth = CalcAuthMask(kID, TRUE);
             //llOwnerSay( "{API} Calculate auth for "+(string)kID+"="+(string)iAuth+";"+sStr);
             llMessageLinked(LINK_SET, COMMAND, (string)iAuth+"|>"+ sStr, kID);
+        } else if(iNum == CMD_ZERO_PUB){
+            if(sStr == "initialize")return;
+            integer iAuth = CalcAuthMask(kID, FALSE);
+            llMessageLinked(LINK_SET, COMMAND, (string)iAuth+"|>"+sStr,kID);
         } else if(iNum == AUTH_REQUEST){
             integer iAuth = CalcAuthMask(kID, FALSE);
             //llOwnerSay("{API} Calculate auth for "+(string)kID+"="+(string)iAuth+";"+sStr);

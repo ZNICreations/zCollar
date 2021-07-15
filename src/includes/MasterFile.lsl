@@ -1,5 +1,5 @@
  
-string COLLAR_VERSION = "10.0.0003"; // Provide enough room
+string COLLAR_VERSION = "10.0.0004"; // Provide enough room
 
 integer MENUNAME_REQUEST = 3000;
 integer MENUNAME_RESPONSE = 3001;
@@ -21,6 +21,38 @@ string setor(integer a, string b, string c)
 {
     if(a)return b;
     else return c;
+}
+string List2ZNI(list input) { // converts a list to a CSV string with type information prepended to each item
+    integer     i;
+    list        output;
+    integer     len;
+
+    len=llGetListLength(input); //this can shave seconds off long lists
+    for (i = 0; i < len; i++) {
+        output += [llGetListEntryType(input, i)] + [llStringToBase64(llList2String(input, i))];
+    }
+
+    return llDumpList2String(output,"&&_");
+}
+list ZNI2List(string inputstring) { // converts a CSV string created with List2TypeCSV back to a list with the correct type information
+    integer     i;
+    list        input;
+    list        output;
+    integer     len;
+
+    input = llParseString2List(inputstring, ["&&_"],[]);
+
+    len=llGetListLength(input);
+    for (i = 0; i < len; i += 2) {
+        if (llList2Integer(input, i) == TYPE_INTEGER) output += (integer)llBase64ToString(llList2String(input, i + 1));
+        else if (llList2Integer(input, i) == TYPE_FLOAT) output += (float)llList2String(input, i + 1);
+        else if (llList2Integer(input, i) == TYPE_STRING) output += llBase64ToString(llList2String(input, i + 1));
+        else if (llList2Integer(input, i) == TYPE_KEY) output += (key)llBase64ToString(llList2String(input, i + 1));
+        else if (llList2Integer(input, i) == TYPE_VECTOR) output += (vector)llBase64ToString(llList2String(input, i + 1));
+        else if (llList2Integer(input, i) == TYPE_ROTATION) output += (rotation)llBase64ToString(llList2String(input, i + 1));
+    }
+
+    return output;
 }
 
 integer QUERY_FOLDER_LOCKS = -9100;
@@ -61,6 +93,7 @@ integer AUTH_REQUEST = 600;
 integer AUTH_REPLY=601;
 
 integer CMD_ZERO = 0;
+integer CMD_ZERO_PUB = -1;
 /*integer CMD_OWNER = 500;
 integer CMD_TRUSTED = 501;
 integer CMD_GROUP = 502;
@@ -223,6 +256,15 @@ Dialog(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPa
     if (~iIndex) g_lMenuIDs = llListReplaceList(g_lMenuIDs, [kID, kMenuID, sName], iIndex, iIndex + g_iMenuStride - 1);
     else g_lMenuIDs += [kID, kMenuID, sName];
 }
+
+DialogAddon(key kID, string sPrompt, list lChoices, list lUtilityButtons, integer iPage, integer iAuth, string sName) {
+    key kMenuID = llGenerateKey();
+    Link("from_addon", DIALOG, (string)kID + "|" + sPrompt + "|" + (string)iPage + "|" + llDumpList2String(lChoices, "`") + "|" + llDumpList2String(lUtilityButtons, "`") + "|" + (string)iAuth, kMenuID);
+
+    integer iIndex = llListFindList(g_lMenuIDs, [kID]);
+    if (~iIndex) g_lMenuIDs = llListReplaceList(g_lMenuIDs, [kID, kMenuID, sName], iIndex, iIndex + g_iMenuStride - 1);
+    else g_lMenuIDs += [kID, kMenuID, sName];
+}
 string SLURL(key kID){
     return "secondlife:///app/agent/"+(string)kID+"/about";
 }
@@ -293,6 +335,22 @@ DeleteDSReq(key ID){
     else return;
 }
 
+string MkMeta(list lTmp){
+    return llDumpList2String(lTmp, ":");
+}
+string SetMetaList(list lTmp){
+    return llDumpList2String(lTmp, ":");
+}
+
+string SetDSMeta(list lTmp){
+    return llDumpList2String(lTmp, ":");
+}
+
+list GetMetaList(key kID){
+    return llParseString2List(GetDSMeta(kID), [":"],[]);
+}
+
+
 integer LEASH_START_MOVEMENT = 6200;
 integer LEASH_END_MOVEMENT = 6201;
 
@@ -315,6 +373,31 @@ integer g_iMenuStride;
 string getperms(string inventory)
 {
     integer perm = llGetInventoryPermMask(inventory,MASK_NEXT);
+    integer fullPerms = PERM_COPY | PERM_MODIFY | PERM_TRANSFER;
+    integer copyModPerms = PERM_COPY | PERM_MODIFY;
+    integer copyTransPerms = PERM_COPY | PERM_TRANSFER;
+    integer modTransPerms = PERM_MODIFY | PERM_TRANSFER;
+    string output = "";
+    if ((perm & fullPerms) == fullPerms)
+        output += "full";
+    else if ((perm & copyModPerms) == copyModPerms)
+        output += "copy & modify";
+    else if ((perm & copyTransPerms) == copyTransPerms)
+        output += "copy & transfer";
+    else if ((perm & modTransPerms) == modTransPerms)
+        output += "modify & transfer";
+    else if ((perm & PERM_COPY) == PERM_COPY)
+        output += "copy";
+    else if ((perm & PERM_TRANSFER) == PERM_TRANSFER)
+        output += "transfer";
+    else
+        output += "none";
+    return  output;
+}
+
+string getperms_current(string inventory)
+{
+    integer perm = llGetInventoryPermMask(inventory,MASK_OWNER);
     integer fullPerms = PERM_COPY | PERM_MODIFY | PERM_TRANSFER;
     integer copyModPerms = PERM_COPY | PERM_MODIFY;
     integer copyTransPerms = PERM_COPY | PERM_TRANSFER;

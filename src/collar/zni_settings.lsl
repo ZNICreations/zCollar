@@ -48,10 +48,10 @@ DoNextRequest(){
     UpdateDSRequest(NULL, g_kCurrentReq, llList2String(g_lReqs,2));
 }
 
-
+string g_sDBID="default";
 
 Send(string args, string meta){
-    SendX("/Collar_Settings.php?"+args, "POST", meta);
+    SendX("/Collar_Settings.php?DBID="+g_sDBID+"&"+args, "POST", meta);
     //UpdateDSRequest(NULL, llHTTPRequest(SERVER+"/Collar_Settings.php", [HTTP_METHOD, "POST", HTTP_MIMETYPE, "application/x-www-form-urlencoded"], args), meta);
 }
 
@@ -98,6 +98,8 @@ key g_kLoadURLBy;
 integer g_iLoadURLConsented;
 UserCommand(integer iNum, string sStr, key kID) {
     string sLower=  llToLower(sStr);
+    list lArgs = llParseString2List(sStr,[" "],[]);
+
     if(sLower == "print settings" || sLower == "debug settings"){
         /*if(AuthCheck(iNum))PrintAll(kID, llGetSubString(sLower,0,4));
         else Error(kID, sStr);*/
@@ -148,6 +150,15 @@ UserCommand(integer iNum, string sStr, key kID) {
             //g_iCurrentIndex=0;
             //llSetTimerEvent(10);
             Send("type=LIST", "lst");
+        }
+    } else if(llToLower(llList2String(lArgs,0)) == "db"){
+        if(iNum & (C_OWNER|C_WEARER)){
+            if(llToLower(llList2String(lArgs,1)) == "id"){
+                g_sDBID = llList2String(lArgs,2);
+                llWhisper(0, "> Database Changed <");
+                llWhisper(0, "> Mandatory Reboot In Progress <");
+                llMessageLinked(LINK_SET, REBOOT, "reboot --f", "");
+            }
         }
     }
 }
@@ -541,9 +552,6 @@ default
         } else if (iNum == DIALOG_TIMEOUT) {
             integer iMenuIndex = llListFindList(g_lMenuIDs, [kID]);
             g_lMenuIDs = llDeleteSubList(g_lMenuIDs, iMenuIndex - 1, iMenuIndex +3);  //remove stride from g_lMenuIDs
-        } else if(iNum == REBOOT)
-        {
-            llResetScript();
         }
     }
 }

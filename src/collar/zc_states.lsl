@@ -120,19 +120,34 @@ list g_lTimers; // signal, start_time, seconds_from
 integer g_iExpectAlive=0;
 list g_lAlive;
 integer g_iPasses=-1;
+
+#define DEBUG_STARTUP
+
+#ifdef DEBUG_STARTUP
+integer START_TIME = 0;
+integer END_TIME = 0;
+PrintStartupTime(){
+    llWhisper(0, "Collar took "+(string)(END_TIME-START_TIME)+" seconds to finish SPP");
+}
+#endif
+
 default
 {
     state_entry()
     {
         if(llGetStartParameter() != 0) state inUpdate;
         
+        #ifdef DEBUG_STARTUP
+        START_TIME=llGetUnixTime();
+        #endif
+        
         g_lAlive=[];
-        g_iPasses=-1;
+        g_iPasses=0;
         g_iExpectAlive=1;
         llSetTimerEvent(1);
         //llScriptProfiler(TRUE);
         llMessageLinked(LINK_SET, REBOOT,"reboot", "");
-        llSleep(5);
+        
         //llMessageLinked(LINK_SET, 0, "initialize", "");
         if(g_iVerbosityLevel>=1)
             llOwnerSay("Collar is preparing to startup, please be patient.");
@@ -140,19 +155,18 @@ default
     
     
     on_rez(integer iRez){
-        llSleep(10);
         llResetScript();
     }
     
     timer(){
         
         if(g_iExpectAlive){
-            if(llGetTime()>=5 && g_iPasses<3){
+            if(llGetTime()>=5 && g_iPasses<2){
                 llMessageLinked(LINK_SET,READY, "","");
                 llResetTime();
                 //llSay(0, "PASS COUNT: "+(string)g_iPasses);
                 g_iPasses++;
-            } else if(llGetTime()>=4.5 && g_iPasses>=3){
+            } else if(llGetTime()>=4.5 && g_iPasses>=2){
                 if(g_iVerbosityLevel>=2)
                     llOwnerSay("Scripts ready: "+(string)llGetListLength(g_lAlive));
                 llMessageLinked(LINK_SET,STARTUP,llDumpList2String(g_lAlive,","),"");
@@ -165,6 +179,11 @@ default
                     llMessageLinked(LINK_SET,NOTIFY,"0Startup in progress... be patient", llGetOwner());
                 //llMessageLinked(LINK_SET,LM_SETTING_REQUEST,"ALL","");
                 llMessageLinked(LINK_SET,0,"initialize","");
+                
+                #ifdef DEBUG_STARTUP
+                END_TIME=llGetUnixTime();
+                PrintStartupTime();
+                #endif
             }
             
             return;
@@ -439,12 +458,17 @@ default
             if(sStr == "update_active")state inUpdate;
         } else if(iNum == ALIVE){
             g_iExpectAlive=1;
-            llResetTime();
-            llSetTimerEvent(1);
+            
+            
             if(llListFindList(g_lAlive,[sStr])==-1){
                 g_iPasses=0;
+                #ifdef DEBUG_STARTUP
+                llWhisper(0, "Script ("+sStr+") seen "+(string)llGetTime()+" seconds after last script");
+                #endif
                 g_lAlive+=[sStr];
-            }
+            }else return;
+            llResetTime();
+            llSetTimerEvent(1);
         }
     }
 }
