@@ -567,8 +567,10 @@ state active
             }
         } else if(iNum == REBOOT){
             llResetScript();
-            
-        } 
+        
+        } else if(iNum == UPDATE_SUPPORT_REPS){
+            g_lSupportReps = llParseString2List(sStr,[","],[]);
+        }
         else if(iNum == DIALOG_RESPONSE){
             integer iMenuIndex = llListFindList(g_lMenuIDs, [kID]);
             if(iMenuIndex!=-1){

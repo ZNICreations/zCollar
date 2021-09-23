@@ -138,8 +138,6 @@ key g_kAddonPending;
 string g_sAddonName;
 key g_kWearer;
 integer g_iLocked=FALSE;
-integer g_iAddonSecurity=TRUE;
-
 
 default
 {
@@ -297,7 +295,7 @@ state active
                 string sMsg = llJsonGetValue(m,["sMsg"]);
                 key kID = llJsonGetValue(m,["kID"]);
 
-                if((iNum == LM_SETTING_DELETE || iNum == LM_SETTING_SAVE || iNum==LM_SETTING_RESPONSE)&& (g_iWearerAddonLimited||(g_iAddonSecurity && llGetOwnerKey(i)!=llGetOwner()))){
+                if((iNum == LM_SETTING_DELETE || iNum == LM_SETTING_SAVE)&& g_iWearerAddonLimited){
                     //string sTest = llToLower(sMsg);
                     if(llSubStringIndex(sMsg, "auth_")!=-1)return;
                     if(llSubStringIndex(sMsg,"intern_")!=-1)return;
@@ -402,9 +400,6 @@ state active
                     g_iWearerAddons=(integer)sVal;
                 } else if(sVar == "addonlimit"){
                     g_iWearerAddonLimited=(integer)sVal;
-                } else if(sVar == "addonlimitother")
-                {
-                    g_iAddonSecurity=(integer)sVal;
                 } else if(sVar == "addons"){
                     g_iAddons = (integer)sVal;
                     DoListeners();
@@ -441,8 +436,6 @@ state active
                     g_iWearerAddons=1;
                 } else if(sVar == "addonlimit"){
                     g_iWearerAddonLimited=1;
-                } else if(sVar == "addonlimitother"){
-                    g_iAddonSecurity = 1;
                 } else if(sVar == "addons"){
                     g_iAddons=1;
                 }

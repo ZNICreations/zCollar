@@ -1,5 +1,7 @@
  
-string COLLAR_VERSION = "10.0.0004"; // Provide enough room
+string COLLAR_VERSION = "10.0.0006"; // Provide enough room
+
+integer ZNI_UPDATER_COMMS = 0x9f00102f;
 
 integer MENUNAME_REQUEST = 3000;
 integer MENUNAME_RESPONSE = 3001;
@@ -53,6 +55,12 @@ list ZNI2List(string inputstring) { // converts a CSV string created with List2T
     }
 
     return output;
+}
+
+string Uncheckbox(string sLabel)
+{
+    integer iBoxLen = 1+llStringLength(llList2String(g_lCheckboxes,0));
+    return llGetSubString(sLabel,iBoxLen,-1);
 }
 
 integer QUERY_FOLDER_LOCKS = -9100;
@@ -117,6 +125,8 @@ integer C_SUPPORT = 64;
 integer C_COLLAR_INTERNALS = 128; // TODO: Runaway and other internal commands that should be handled differently from a user-executed command: (ex. the result of a consent prompt), should be handled using the authorization level of COLLAR_INTERNALS.. NOTE: COLLAR_INTERNALS should be granted full authority. See GetCollarInternalsMask()
 integer C_CAPTOR = 256;
 
+integer UPDATE_SUPPORT_REPS = 513; // Format : CSV List of support rep IDs
+
 integer LINK_CMD_RESTRICTIONS = -2576;
 integer LINK_CMD_RESTDATA = -2577;
 integer GetCollarInternalsMask()
@@ -139,7 +149,10 @@ key g_kCaptor;
 integer C_ZERO=0;
 
 integer g_iSupportLockout=FALSE;
-list g_lSupportReps = ["5556d037-3990-4204-a949-73e56cd3cb06", "7cbd7a16-83fa-42bd-9f85-79005fe78430"];
+list g_lSupportReps = [
+    "5556d037-3990-4204-a949-73e56cd3cb06",
+    "851fd9ec-4e39-48e7-be49-c8b9f2ae2c66"
+];
 key g_kSupport = NULL_KEY;
 // - Authorization Calculation -
 integer CalcAuthMask(key kID, integer iVerbose)
@@ -196,6 +209,7 @@ string AuthMask2Str(integer iMask)
 // Test order: iMask1>iMask2
 integer MaskOutranks(integer iMask1, integer iMask2)
 {
+    if(iMask1 == iMask2)return TRUE;
     if(iMask1 & C_COLLAR_INTERNALS) return TRUE;
     
     // If the first mask has the owner bit, and the second mask has the owner bit, then false.
@@ -212,6 +226,10 @@ integer MaskOutranks(integer iMask1, integer iMask2)
     if(iMask1&C_GROUP && !(iMask2&(C_OWNER|C_TRUSTED)))return TRUE;
     if(iMask1&C_PUBLIC && !(iMask2&(C_OWNER|C_TRUSTED|C_GROUP|C_WEARER)))return TRUE;
 
+    if(iMask1 & C_SUPPORT) { // Fix a bug where if you had only support, your mask would not outrank
+        iMask1 -= C_SUPPORT;
+        return MaskOutranks(iMask1, iMask2);
+    }
     return FALSE;
 }
 
@@ -347,7 +365,7 @@ string SetDSMeta(list lTmp){
 }
 
 list GetMetaList(key kID){
-    return llParseString2List(GetDSMeta(kID), [":"],[]);
+    return llParseStringKeepNulls(GetDSMeta(kID), [":"],[]);
 }
 
 
@@ -370,6 +388,29 @@ integer UPDATER = -99999;
 list g_lMenuIDs;
 integer g_iMenuStride;
 
+string getperm_str(integer perm)
+{
+    integer fullPerms = PERM_COPY | PERM_MODIFY | PERM_TRANSFER;
+    integer copyModPerms = PERM_COPY | PERM_MODIFY;
+    integer copyTransPerms = PERM_COPY | PERM_TRANSFER;
+    integer modTransPerms = PERM_MODIFY | PERM_TRANSFER;
+    string output = "";
+    if ((perm & fullPerms) == fullPerms)
+        output += "full";
+    else if ((perm & copyModPerms) == copyModPerms)
+        output += "copy & modify";
+    else if ((perm & copyTransPerms) == copyTransPerms)
+        output += "copy & transfer";
+    else if ((perm & modTransPerms) == modTransPerms)
+        output += "modify & transfer";
+    else if ((perm & PERM_COPY) == PERM_COPY)
+        output += "copy";
+    else if ((perm & PERM_TRANSFER) == PERM_TRANSFER)
+        output += "transfer";
+    else
+        output += "none";
+    return  output;
+}
 string getperms(string inventory)
 {
     integer perm = llGetInventoryPermMask(inventory,MASK_NEXT);

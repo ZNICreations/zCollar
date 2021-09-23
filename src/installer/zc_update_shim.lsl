@@ -258,7 +258,6 @@ default
         else if(iNum == DIALOG_RESPONSE){
         
             list lMenuParams = llParseString2List(sStr, ["|"],[]);
-            integer iAuth = llList2Integer(lMenuParams,3);
             
             
             integer iMenuIndex = llListFindList(g_lMenuIDs, [kID]);
@@ -331,11 +330,11 @@ default
                 llResetOtherScript("zni_settings");
                 llResetOtherScript("zc_states");
                 list lAssertOFF = ["zc_states", "zc_core", "zc_api"];
-                integer i=0;
+                integer ix=0;
                 integer end = llGetListLength(lAssertOFF);
-                for(i=0;i<end;i++)
+                for(ix=0;ix<end;ix++)
                 {
-                    if(llGetInventoryType(llList2String(lAssertOFF, i))==INVENTORY_SCRIPT)llSetScriptState(llList2String(lAssertOFF, i), TRUE);
+                    if(llGetInventoryType(llList2String(lAssertOFF, ix))==INVENTORY_SCRIPT)llSetScriptState(llList2String(lAssertOFF, ix), TRUE);
                 }
                 llSleep(15);
                 llMessageLinked(LINK_SET,REBOOT,"","");

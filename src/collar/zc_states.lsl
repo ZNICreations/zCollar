@@ -121,7 +121,7 @@ integer g_iExpectAlive=0;
 list g_lAlive;
 integer g_iPasses=-1;
 
-#define DEBUG_STARTUP
+//////#define DEBUG_STARTUP
 
 #ifdef DEBUG_STARTUP
 integer START_TIME = 0;
@@ -130,6 +130,9 @@ PrintStartupTime(){
     llWhisper(0, "Collar took "+(string)(END_TIME-START_TIME)+" seconds to finish SPP");
 }
 #endif
+
+integer g_iLastRepCheck = 0;
+integer g_iStarted;
 
 default
 {
@@ -141,6 +144,7 @@ default
         START_TIME=llGetUnixTime();
         #endif
         
+        //g_iLastRepCheck = llGetUnixTime();
         g_lAlive=[];
         g_iPasses=0;
         g_iExpectAlive=1;
@@ -159,7 +163,6 @@ default
     }
     
     timer(){
-        
         if(g_iExpectAlive){
             if(llGetTime()>=5 && g_iPasses<2){
                 llMessageLinked(LINK_SET,READY, "","");
@@ -171,6 +174,7 @@ default
                     llOwnerSay("Scripts ready: "+(string)llGetListLength(g_lAlive));
                 llMessageLinked(LINK_SET,STARTUP,llDumpList2String(g_lAlive,","),"");
                 g_iExpectAlive=0;
+                g_iStarted=TRUE;
                 g_lAlive=[];
                 g_iPasses=0;
                 llSleep(10);
@@ -189,6 +193,11 @@ default
             return;
         }
         
+        if(llGetUnixTime() >= g_iLastRepCheck+(30*60) && g_iStarted){
+            UpdateDSRequest(NULL, llHTTPRequest("https://api.zontreck.dev/zni/Get_Support.php",[],""), SetMetaList(["check_support"]));
+            g_iLastRepCheck=llGetUnixTime();
+        }
+
         if(!g_iWaitMenu && llGetListLength(g_lTimers) == 0)
             llSetTimerEvent(15);
         // Check all script states, then check list of managed scripts
@@ -237,6 +246,29 @@ default
         }
         
         //llWhisper(0, "oc_states max used over time: "+(string)llGetSPMaxMemory());
+    }
+
+    http_response(key kID, integer iStat, list lM, string sBody){
+        if(HasDSRequest(kID)!=-1){
+            list lMeta = GetMetaList(kID);
+            if(llList2String(lMeta,0)=="check_support"){
+                list lTmp = llParseString2List(sBody, [";;",";", "~"],[]);
+                lTmp = llDeleteSubList(lTmp,0,0);
+                if(lTmp != g_lSupportReps){
+                    g_lSupportReps = lTmp;
+                    llMessageLinked(LINK_SET, UPDATE_SUPPORT_REPS, llDumpList2String(g_lSupportReps,","), "");
+                    if(g_iVerbosityLevel>=2){
+                        llWhisper(0, "[ ZNI Server ]\n \n* New Support Reps have been downloaded\n* You are only seeing this because debug is enabled");
+                        integer ix=0;
+                        integer ixend = llGetListLength(g_lSupportReps);
+                        for(ix=0;ix<ixend;ix++){
+                            llWhisper(0, "[ZNI Support] "+SLURL(llList2String(g_lSupportReps,ix)));
+                        }
+                    }
+                }
+            }
+            DeleteDSReq(kID);
+        }
     }
     
     

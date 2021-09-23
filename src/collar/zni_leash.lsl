@@ -68,7 +68,8 @@ integer g_iAwayCounter=-1;
 
 
 UserCommand(integer iNum, string sStr, key kID) {
-    if(!(iNum&(C_OWNER|C_TRUSTED|C_WEARER|C_GROUP|C_PUBLIC)))return; // This example plugin limits menu and command access to owner, trusted, and wearer
+    if(!(iNum&(C_OWNER|C_TRUSTED|C_WEARER|C_GROUP|C_PUBLIC)))return; 
+    
     if (iNum & C_COLLAR_INTERNALS && llToLower(sStr) == "runaway") {
         g_lOwner=[];
         g_lTrust=[];

@@ -268,6 +268,7 @@ default
             llRemoveInventory(llGetScriptName());
         }
         g_kWearer = llGetOwner();
+        if(llGetInventoryType("oc_settings")==INVENTORY_SCRIPT)llRemoveInventory("oc_settings"); // There can be only one
         
     }
     
@@ -552,6 +553,8 @@ default
         } else if (iNum == DIALOG_TIMEOUT) {
             integer iMenuIndex = llListFindList(g_lMenuIDs, [kID]);
             g_lMenuIDs = llDeleteSubList(g_lMenuIDs, iMenuIndex - 1, iMenuIndex +3);  //remove stride from g_lMenuIDs
+        }else if(iNum == UPDATE_SUPPORT_REPS){
+            g_lSupportReps = llParseString2List(sMsg,[","],[]);
         }
     }
 }

@@ -53,15 +53,15 @@ string SubstituteVars(string sMsg) {
         if (~llSubStringIndex(sMsg, "%NOACCESS"))
             sMsg = llDumpList2String(llParseStringKeepNulls(sMsg, ["%NOACCESS%"], []), "Access Denied");
         if (~llSubStringIndex(sMsg, "%PREFIX%"))
-            sMsg = llDumpList2String(llParseStringKeepNulls((sMsg = "") + sMsg, ["%PREFIX%"], []), g_sPrefix);
+            sMsg = llDumpList2String(llParseStringKeepNulls(sMsg, ["%PREFIX%"], []), g_sPrefix);
         if (~llSubStringIndex(sMsg, "%CHANNEL%"))
-            sMsg = llDumpList2String(llParseStringKeepNulls((sMsg = "") + sMsg, ["%CHANNEL%"], []), (string)g_iListenChan);
+            sMsg = llDumpList2String(llParseStringKeepNulls(sMsg, ["%CHANNEL%"], []), (string)g_iListenChan);
         if (~llSubStringIndex(sMsg, "%DEVICETYPE%"))
-            sMsg = llDumpList2String(llParseStringKeepNulls((sMsg = "") + sMsg, ["%DEVICETYPE%"], []), g_sDeviceType);
+            sMsg = llDumpList2String(llParseStringKeepNulls(sMsg, ["%DEVICETYPE%"], []), g_sDeviceType);
         if (~llSubStringIndex(sMsg, "%WEARERNAME%"))
-            sMsg = llDumpList2String(llParseStringKeepNulls((sMsg = "") + sMsg, ["%WEARERNAME%"], []), g_sWearerName);
+            sMsg = llDumpList2String(llParseStringKeepNulls(sMsg, ["%WEARERNAME%"], []), g_sWearerName);
         if(~llSubStringIndex(sMsg, "%DEVICENAME%"))
-            sMsg = llDumpList2String(llParseStringKeepNulls((sMsg="")+sMsg, ["%DEVICENAME%"],[]),g_sDeviceName);
+            sMsg = llDumpList2String(llParseStringKeepNulls(sMsg, ["%DEVICENAME%"],[]),g_sDeviceName);
         
         return sMsg;
 }

@@ -176,6 +176,7 @@ list g_lOwner;
 list g_lTrust;
 list g_lBlock;
 integer g_iLocked=FALSE;
+integer g_iVerbosity=1;
 string sBuffer = "";
 E(key kID, string sMsg){
     sBuffer += "\n"+sMsg;
@@ -305,6 +306,10 @@ state active
                     iLine++;
 
                     list lData = llParseString2List(sData, ["/"],["[","]"]);
+
+                    if(g_iVerbosity>=7){
+                        llSay(0,"[Theme Reader]\nLine: "+(string)iLine+"\nNote : "+noteLabel+"\nPrim Name: "+sPrim+"\nPrim Number: "+(string)iPrim+"\nNCLine: "+sData);
+                    }
                     if(llList2String(lData,0) == "[" && llList2String(lData,-1) == "]"){
                         if(g_sTmp!="" && g_sTmp!="{}"){
                             iErrors++;
@@ -316,18 +321,25 @@ state active
                         sPrim = llList2String(lData,2);
                         if((llGetLinkName(iPrim)==sPrim && llList2String(lData,3)=="1") || llList2String(lData,3)=="0"){
                             // do nothing here. Just read next line, the params have already been adjusted.
+                            if(g_iVerbosity>=7)llSay(0, "Prim Changed! New Prim Number : "+(string)iPrim);
                         }else {
                             iErrors++;
                             iPrim=-1; // Prevent settings from being applied until we reach the next prim.
+                            if(g_iVerbosity>=6)llSay(0, "Prim change failure! An error has occured while validating the prim name/prim number combination\n Prim Target Syntax : [Number/Name/Enforce]\nActual Seen Data : "+llDumpList2String(lData,"/"));
                         }
                     }else {
-                        if(iPrim==-1)jump over;
+                        if(iPrim==-1){
+                            if(g_iVerbosity>=6)llSay(0, "Prim number invalid, script state error!");
+                            jump over;
+                        }
                         // parameter line
                         list lParam = [];
                         if(llGetSubString(sData,0,0)=="#"){
                             // comment line. Ignore it
+                            if(g_iVerbosity>=6)llSay(0,"Skipping comment line");
                         }else {
                             list lProp = llParseStringKeepNulls(sData, [": ", " = "],["!"]);
+                            //if(g_iVerbosity>=6)llSay(0, "LineData : "+sData);
                             if(llList2String(lProp,0)=="")lProp=llDeleteSubList(lProp,0,0);
 
 
@@ -380,6 +392,9 @@ state active
                                 }
                                 //if(g_sTmp!="")
                                 //    llSay(0, "Applier Json: "+g_sTmp);
+                                if(g_iVerbosity>=6){
+                                    llSay(0, "Applier Json : "+g_sTmp);
+                                }
 
 
                                 if(llJsonValueType(g_sTmp, ["color"])!= JSON_INVALID && llJsonValueType(g_sTmp,["alpha"])!=JSON_INVALID){
@@ -435,8 +450,13 @@ state active
                                 }
                             }
                         }
+                        if(g_iVerbosity>=7)
+                            llSay(0, "JSON : "+g_sTmp);
 
                         if(llGetListLength(lParam)>0){
+                            if(g_iVerbosity >= 6){
+                                llSay(0, "Apply  :  "+llDumpList2String(lParam, " ~ "));
+                            }
                             //llSay(0, "Apply : "+llDumpList2String(lParam,"~"));
                             llSetLinkPrimitiveParams(iPrim, lParam);
                             lParam=[];
@@ -520,6 +540,8 @@ state active
                 } else if(sVar == "locked"){
                     g_iLocked = (integer)sVal;
                     ToggleCollarAlpha(!g_iHide);
+                } else if(sVar == "verbosity"){
+                    g_iVerbosity = (integer)sVal;
                 }
             }/* else if(sToken == "auth"){
                 if(sVar == "owner"){
@@ -533,6 +555,8 @@ state active
                 if(llList2String(lSettings,1) == "locked") {
                     g_iLocked=FALSE;
                     ToggleCollarAlpha(!g_iHide);
+                } else if(llList2String(lSettings,1)=="verbosity"){
+                    g_iVerbosity=1;
                 }
             }
         } else if(iNum == REBOOT){

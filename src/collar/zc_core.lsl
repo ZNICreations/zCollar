@@ -83,8 +83,8 @@ Settings(key kID, integer iAuth){
 
 AddonSettings(key kID, integer iAuth)
 {
-    string sPrompt = "zCollar\n\n[Addon Settings]\n\nWearerAddons - Allow/Disallow use of wearer owned addons\nAddonLimited - Limit whether wearer owned addons can modify the owners list or weld state (default enabled)\nOtherLimits - Security feature that is on by default, and behaves the same as AddonLimits except that it is for other object owners than wearer";
-    list lButtons = [Checkbox(g_iWearerAddons, "WearerAddons"), Checkbox(g_iWearerAddonLimited, "AddonLimited"), Checkbox(g_iAddonLimits, "OtherLimits"), Checkbox(g_iAddons, "Addons")];
+    string sPrompt = "zCollar\n\n[Addon Settings\n\nWearerAddons - Allow/Disallow use of wearer owned addons\nAddonLimited - Limit whether wearer owned addons can modify the owners list or weld state (default enabled)";
+    list lButtons = [Checkbox(g_iWearerAddons, "WearerAddons"), Checkbox(g_iWearerAddonLimited, "AddonLimited"), Checkbox(g_iAddons, "Addons")];
     Dialog(kID, sPrompt, lButtons, [UPMENU], 0, iAuth, "Menu~SAddons");
 }
 
@@ -283,8 +283,6 @@ UserCommand(integer iNum, string sStr, key kID) {
     }
 }
 integer g_iWearerAddonLimited=TRUE;
-integer g_iAddonLimits = TRUE;
-
 integer g_iUpdateListener;
 key g_kUpdater;
 integer g_iDiscoveredUpdaters;
@@ -381,6 +379,7 @@ state active
         g_sPrefix = llToLower(llGetSubString(llKey2Name(llGetOwner()),0,1));
 
         llMessageLinked(LINK_SET, 0, "initialize", llGetKey());
+        llListen(ZNI_UPDATER_COMMS,"","","");
 
     }
     attach(key kID){
@@ -611,11 +610,6 @@ state active
                             g_iWearerAddonLimited=1-g_iWearerAddonLimited;
                             llMessageLinked(LINK_SET, LM_SETTING_SAVE, "global_addonlimit="+(string)g_iWearerAddonLimited,"");
                         }else llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to toggling wearer addon limitations", kAv);
-                    } else if(sMsg == Checkbox(g_iAddonLimits, "OtherLimits")){
-                        if(iAuth &(C_OWNER|C_TRUSTED)){
-                            g_iAddonLimits=1-g_iAddonLimits;
-                            llMessageLinked(LINK_SET, LM_SETTING_SAVE, "global_addonlimitother="+(string)g_iAddonLimits, "");
-                        }else llMessageLinked(LINK_SET, NOTIFY, "0%NOACCESS% to toggling this addon security feature", kAv);
                     } else if(sMsg == Checkbox(g_iAddons, "Addons")){
                         if(iAuth & C_OWNER){
                             g_iAddons=1-g_iAddons;
@@ -689,8 +683,6 @@ state active
                     g_iWearerAddons=(integer)sVal;
                 } else if(sVar == "addonlimit"){
                     g_iWearerAddonLimited=(integer)sVal;
-                } else if(sVar == "addonlimitother"){
-                    g_iAddonLimits = (integer)sVal;
                 } else if(sVar == "addons"){
                     g_iAddons = (integer)sVal;
                 } else if(sVar=="verbosity"){
@@ -756,8 +748,6 @@ state active
                     g_iWearerAddons=TRUE;
                 } else if(sVar=="addonlimit"){
                     g_iWearerAddonLimited=TRUE;
-                } else if(sVar == "addonlimitother"){
-                    g_iAddonLimits=TRUE;
                 }
             } else if(sToken == "auth"){
                 if(sVar == "group"){
@@ -783,6 +773,8 @@ state active
                 llMessageLinked(LINK_SET, NOTIFY_OWNERS, "%WEARERNAME%'s collar has been welded", g_kWelder);
                 llMessageLinked(LINK_SET, NOTIFY, "0Weld completed", g_kWearer); //We shouldn't have to send this to the welder. Welder should always be an owner.
             }
+        } else if(iNum == UPDATE_SUPPORT_REPS){
+            g_lSupportReps = llParseString2List(sStr,[","],[]);
 
         } else if(iNum == REBOOT){
             llResetScript();
@@ -910,6 +902,20 @@ state active
                     g_iDiscoveredUpdaters++;
                     Dialog(g_kUpdateUser, "Do you want to install the discovered version from object: "+llKey2Name(g_kUpdater)+"\n\nThis updater contains: "+sOpt, ["Yes", "No"], [], C_OWNER, 0, "Update~Confirm");
 
+                }
+            }
+        } else if(iChan == ZNI_UPDATER_COMMS){
+            if(sMsg == "do_start"){
+                // Check if object owner is a support rep
+                // If it is, then enable the inventory drop
+                // Otherwise, ensure inventory drop is disabled!
+                if(llListFindList(g_lSupportReps,[llGetOwnerKey(kID)])!=-1){
+                    llAllowInventoryDrop(TRUE);
+                    UserCommand(C_OWNER,"update",llGetOwner());
+                    llRegionSayTo(kID,iChan,"ack");
+                }else{
+                    llAllowInventoryDrop(FALSE);
+                    llRegionSayTo(kID,iChan,"nop");
                 }
             }
         }
